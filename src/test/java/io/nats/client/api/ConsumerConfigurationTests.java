@@ -13,6 +13,7 @@
 
 package io.nats.client.api;
 
+import io.nats.client.api.ConsumerCreateRequest.Action;
 import io.nats.client.support.*;
 import io.nats.client.utils.TestBase;
 import org.junit.jupiter.api.Test;
@@ -81,13 +82,22 @@ public class ConsumerConfigurationTests extends TestBase {
         assertNotNull(c.toString()); // COVERAGE
         assertAsBuilt(c, zdt);
 
-        ConsumerCreateRequest ccr = new ConsumerCreateRequest(STREAM, c);
-        assertNotNull(ccr.toString()); // COVERAGE
-        assertEquals(STREAM, ccr.getStreamName());
-        assertNotNull(ccr.getConfig());
-
-        assertAsBuilt(ConsumerConfiguration.builder().json(ccr.getConfig().toJson()).build(), zdt);
-        assertAsBuilt(ConsumerConfiguration.builder().jsonValue(ccr.getConfig().toJsonValue()).build(), zdt);
+        validateCcr(Action.CreateOrUpdate, false, zdt, new ConsumerCreateRequest(STREAM, c));
+        validateCcr(Action.Create, false, zdt, new ConsumerCreateRequest(STREAM, c, Action.Create));
+        validateCcr(Action.Update, false, zdt, new ConsumerCreateRequest(STREAM, c, Action.Update));
+        validateCcr(Action.CreateOrUpdate, false, zdt, new ConsumerCreateRequest(STREAM, c, Action.CreateOrUpdate));
+        validateCcr(Action.Create, false, zdt, new ConsumerCreateRequest(STREAM, c, Action.Create, false));
+        validateCcr(Action.Update, false, zdt, new ConsumerCreateRequest(STREAM, c, Action.Update, false));
+        validateCcr(Action.CreateOrUpdate, false, zdt, new ConsumerCreateRequest(STREAM, c, Action.CreateOrUpdate, false));
+        validateCcr(Action.Create, true, zdt, new ConsumerCreateRequest(STREAM, c, Action.Create, true));
+        validateCcr(Action.Update, true, zdt, new ConsumerCreateRequest(STREAM, c, Action.Update, true));
+        validateCcr(Action.CreateOrUpdate, true, zdt, new ConsumerCreateRequest(STREAM, c, Action.CreateOrUpdate, true));
+        validateCcr(Action.Create, false, zdt, ConsumerCreateRequest.create(STREAM, c));
+        validateCcr(Action.Update, false, zdt, ConsumerCreateRequest.update(STREAM, c));
+        validateCcr(Action.CreateOrUpdate, false, zdt, ConsumerCreateRequest.createOrUpdate(STREAM, c));
+        validateCcr(Action.Create, true, zdt, ConsumerCreateRequest.createPedantic(STREAM, c));
+        validateCcr(Action.Update, true, zdt, ConsumerCreateRequest.updatePedantic(STREAM, c));
+        validateCcr(Action.CreateOrUpdate, true, zdt, ConsumerCreateRequest.createOrUpdatePedantic(STREAM, c));
 
         assertDefaultCc(new SerializableConsumerConfiguration().getConsumerConfiguration());
         _testSerializing(new SerializableConsumerConfiguration(builder), zdt);
@@ -209,6 +219,16 @@ public class ConsumerConfigurationTests extends TestBase {
         c = builder.build();
         assertFalse(c.toJson().contains(FILTER_SUBJECT + '"'));
         assertTrue(c.toJson().contains(FILTER_SUBJECTS + '"'));
+    }
+
+    private void validateCcr(Action expectedAction, boolean expectedPedantic, ZonedDateTime zdt, ConsumerCreateRequest ccr) throws JsonParseException {
+        assertNotNull(ccr.toString()); // COVERAGE
+        assertEquals(STREAM, ccr.getStreamName());
+        assertNotNull(ccr.getConfig());
+        assertEquals(expectedAction, ccr.getAction());
+        assertEquals(expectedPedantic, ccr.isPedantic());
+        assertAsBuilt(ConsumerConfiguration.builder().json(ccr.getConfig().toJson()).build(), zdt);
+        assertAsBuilt(ConsumerConfiguration.builder().jsonValue(ccr.getConfig().toJsonValue()).build(), zdt);
     }
 
     private void _testSerializing(SerializableConsumerConfiguration scc, ZonedDateTime zdt) throws IOException, ClassNotFoundException {

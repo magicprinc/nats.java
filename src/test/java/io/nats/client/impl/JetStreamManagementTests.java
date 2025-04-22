@@ -1426,123 +1426,163 @@ public class JetStreamManagementTests extends JetStreamTestBase {
     @Test
     public void testCreateConsumerUpdateConsumer() throws Exception {
         jsServer.run(TestBase::atLeast2_9_0, nc -> {
-            String streamPrefix = variant();
             JetStreamManagement jsmNew = nc.jetStreamManagement();
             JetStreamManagement jsmPre290 = nc.jetStreamManagement(JetStreamOptions.builder().optOut290ConsumerCreate(true).build());
-
-            // --------------------------------------------------------
-            // New without filter
-            // --------------------------------------------------------
-            String stream1 = streamPrefix + "-new";
+            String stream = stream();
             String name = name();
             String subject = name();
-            createMemoryStream(jsmNew, stream1, subject + ".*");
+            String streamSubject = subject + ".*";
+            String fs1 = subject + ".A";
+            String fs2 = subject + ".B";
+            String fs3 = subject + ".C";
+
+            // ================================================================================
+            // New without filter
+            // ================================================================================
+            createOrReplaceMemoryStream(jsmNew, stream, streamSubject);
 
             ConsumerConfiguration cc11 = ConsumerConfiguration.builder().name(name).build();
 
             // update no good when not exist
-            JetStreamApiException e = assertThrows(JetStreamApiException.class, () -> jsmNew.updateConsumer(stream1, cc11));
+            JetStreamApiException e = assertThrows(JetStreamApiException.class, () -> jsmNew.updateConsumer(stream, cc11));
             assertEquals(10149, e.getApiErrorCode());
 
             // initial create ok
-            ConsumerInfo ci = jsmNew.createConsumer(stream1, cc11);
+            ConsumerInfo ci = jsmNew.createConsumer(stream, cc11);
             assertEquals(name, ci.getName());
             assertNull(ci.getConsumerConfiguration().getFilterSubject());
 
             // any other create no good
-            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createConsumer(stream1, cc11));
+            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createConsumer(stream, cc11));
             assertEquals(10148, e.getApiErrorCode());
 
             // update ok when exists
             ConsumerConfiguration cc12 = ConsumerConfiguration.builder().name(name).description(variant()).build();
-            ci = jsmNew.updateConsumer(stream1, cc12);
+            ci = jsmNew.updateConsumer(stream, cc12);
             assertEquals(name, ci.getName());
             assertNull(ci.getConsumerConfiguration().getFilterSubject());
 
-            // --------------------------------------------------------
+            // --------------------------------------------------------------------------------
+            // New without filter with the ConsumerCreateRequest
+            // --------------------------------------------------------------------------------
+            createOrReplaceMemoryStream(jsmNew, stream, streamSubject);
+
+            ConsumerConfiguration cc11ccr = ConsumerConfiguration.builder().name(name).build();
+
+            // update no good when not exist
+            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.update(stream, cc11ccr)));
+            assertEquals(10149, e.getApiErrorCode());
+
+            // initial create ok
+            ci = jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.create(stream, cc11ccr));
+            assertEquals(name, ci.getName());
+            assertNull(ci.getConsumerConfiguration().getFilterSubject());
+
+            // any other create no good
+            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.create(stream, cc11ccr)));
+            assertEquals(10148, e.getApiErrorCode());
+
+            // update ok when exists
+            ConsumerConfiguration cc12ccr = ConsumerConfiguration.builder().name(name).description(variant()).build();
+            ci = jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.update(stream, cc12ccr));
+            assertEquals(name, ci.getName());
+            assertNull(ci.getConsumerConfiguration().getFilterSubject());
+
+            // ================================================================================
             // New with filter subject
-            // --------------------------------------------------------
-            String stream2 = streamPrefix + "-new-fs";
-            name = name();
-            subject = name();
-            String fs1 = subject + ".A";
-            String fs2 = subject + ".B";
-            createMemoryStream(jsmNew, stream2, subject + ".*");
+            // ================================================================================
+            createOrReplaceMemoryStream(jsmNew, stream, streamSubject); // fresh stream removes all consumers too
 
             ConsumerConfiguration cc21 = ConsumerConfiguration.builder().name(name).filterSubject(fs1).build();
 
             // update no good when not exist
-            e = assertThrows(JetStreamApiException.class, () -> jsmNew.updateConsumer(stream2, cc21));
+            e = assertThrows(JetStreamApiException.class, () -> jsmNew.updateConsumer(stream, cc21));
             assertEquals(10149, e.getApiErrorCode());
 
             // initial create ok
-            ci = jsmNew.createConsumer(stream2, cc21);
+            ci = jsmNew.createConsumer(stream, cc21);
             assertEquals(name, ci.getName());
             assertEquals(fs1, ci.getConsumerConfiguration().getFilterSubject());
 
             // any other create no good
-            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createConsumer(stream2, cc21));
+            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createConsumer(stream, cc21));
             assertEquals(10148, e.getApiErrorCode());
 
             // update ok when exists
             ConsumerConfiguration cc22 = ConsumerConfiguration.builder().name(name).filterSubjects(fs2).build();
-            ci = jsmNew.updateConsumer(stream2, cc22);
+            ci = jsmNew.updateConsumer(stream, cc22);
             assertEquals(name, ci.getName());
             assertEquals(fs2, ci.getConsumerConfiguration().getFilterSubject());
 
-            // --------------------------------------------------------
+            // --------------------------------------------------------------------------------
+            // New with filter subject with the ConsumerCreateRequest
+            // --------------------------------------------------------------------------------
+            createOrReplaceMemoryStream(jsmNew, stream, streamSubject); // fresh stream removes all consumers too
+
+            ConsumerConfiguration cc21ccr = ConsumerConfiguration.builder().name(name).filterSubject(fs1).build();
+
+            // update no good when not exist
+            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.update(stream, cc21ccr)));
+            assertEquals(10149, e.getApiErrorCode());
+
+            // initial create ok
+            ci = jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.create(stream, cc21ccr));
+            assertEquals(name, ci.getName());
+            assertEquals(fs1, ci.getConsumerConfiguration().getFilterSubject());
+
+            // any other create no good
+            e = assertThrows(JetStreamApiException.class, () -> jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.create(stream, cc21ccr)));
+            assertEquals(10148, e.getApiErrorCode());
+
+            // update ok when exists
+            ConsumerConfiguration cc22ccr = ConsumerConfiguration.builder().name(name).filterSubjects(fs2).build();
+            ci = jsmNew.createOrUpdateConsumer(ConsumerCreateRequest.update(stream, cc22ccr));
+            assertEquals(name, ci.getName());
+            assertEquals(fs2, ci.getConsumerConfiguration().getFilterSubject());
+
+            // ================================================================================
             // Pre 290 durable pathway
-            // --------------------------------------------------------
-            String stream3 = streamPrefix + "-old-durable";
-            name = name();
-            subject = name();
-            fs1 = subject + ".A";
-            fs2 = subject + ".B";
-            String fs3 = subject + ".C";
-            createMemoryStream(jsmPre290, stream3, subject + ".*");
+            // ================================================================================
+            createOrReplaceMemoryStream(jsmPre290, stream, streamSubject);
 
             ConsumerConfiguration cc31 = ConsumerConfiguration.builder().durable(name).filterSubject(fs1).build();
 
             // update no good when not exist
-            e = assertThrows(JetStreamApiException.class, () -> jsmPre290.updateConsumer(stream3, cc31));
+            e = assertThrows(JetStreamApiException.class, () -> jsmPre290.updateConsumer(stream, cc31));
             assertEquals(10149, e.getApiErrorCode());
 
             // initial create ok
-            ci = jsmPre290.createConsumer(stream3, cc31);
+            ci = jsmPre290.createConsumer(stream, cc31);
             assertEquals(name, ci.getName());
             assertEquals(fs1, ci.getConsumerConfiguration().getFilterSubject());
 
             // opt out of 209, create on existing ok
             // This is not exactly the same behavior as with the new consumer create api, but it's what the server does
-            jsmPre290.createConsumer(stream3, cc31);
+            jsmPre290.createConsumer(stream, cc31);
 
             ConsumerConfiguration cc32 = ConsumerConfiguration.builder().durable(name).filterSubject(fs2).build();
-            e = assertThrows(JetStreamApiException.class, () -> jsmPre290.createConsumer(stream3, cc32));
+            e = assertThrows(JetStreamApiException.class, () -> jsmPre290.createConsumer(stream, cc32));
             assertEquals(10148, e.getApiErrorCode());
 
             // update ok when exists
             ConsumerConfiguration cc33 = ConsumerConfiguration.builder().durable(name).filterSubjects(fs3).build();
-            ci = jsmPre290.updateConsumer(stream3, cc33);
+            ci = jsmPre290.updateConsumer(stream, cc33);
             assertEquals(name, ci.getName());
             assertEquals(fs3, ci.getConsumerConfiguration().getFilterSubject());
 
-            // --------------------------------------------------------
+            // ================================================================================
             // Pre 290 ephemeral pathway
-            // --------------------------------------------------------
-            subject = name();
-
-            String stream4 = streamPrefix + "-old-ephemeral";
-            fs1 = subject + ".A";
-            createMemoryStream(jsmPre290, stream4, subject + ".*");
+            // ================================================================================
+            createOrReplaceMemoryStream(jsmPre290, stream, streamSubject);
 
             ConsumerConfiguration cc4 = ConsumerConfiguration.builder().filterSubject(fs1).build();
 
             // update no good when not exist
-            e = assertThrows(JetStreamApiException.class, () -> jsmPre290.updateConsumer(stream4, cc4));
+            e = assertThrows(JetStreamApiException.class, () -> jsmPre290.updateConsumer(stream, cc4));
             assertEquals(10149, e.getApiErrorCode());
 
             // initial create ok
-            ci = jsmPre290.createConsumer(stream4, cc4);
+            ci = jsmPre290.createConsumer(stream, cc4);
             assertEquals(fs1, ci.getConsumerConfiguration().getFilterSubject());
         });
     }

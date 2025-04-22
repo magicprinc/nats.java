@@ -36,7 +36,7 @@ public interface JetStreamManagement {
     AccountStatistics getAccountStatistics() throws IOException, JetStreamApiException;
 
     /**
-     * Loads or creates a stream.
+     * Creates a stream.
      * @param config the stream configuration to use.
      * @return stream information
      * @throws IOException covers various communication issues with the NATS
@@ -56,6 +56,18 @@ public interface JetStreamManagement {
      * @throws IllegalArgumentException the configuration is missing or invalid
      */
     StreamInfo updateStream(StreamConfiguration config) throws IOException, JetStreamApiException;
+
+    /**
+     * Creates or updates a stream based on the options
+     * @param config the stream configuration to use.
+     * @param streamCrudOptions the options
+     * @return stream information
+     * @throws IOException covers various communication issues with the NATS
+     *         server such as timeout or interruption
+     * @throws JetStreamApiException the request had an error related to the data
+     * @throws IllegalArgumentException the configuration is missing or invalid
+     */
+    StreamInfo createOrUpdateStream(StreamConfiguration config, StreamManagementOptions streamCrudOptions) throws IOException, JetStreamApiException;
 
     /**
      * Deletes an existing stream.
@@ -88,7 +100,7 @@ public interface JetStreamManagement {
      * @throws IOException covers various communication issues with the NATS
      *         server such as timeout or interruption
      * @throws JetStreamApiException the request had an error related to the data
-     */
+    7 */
     StreamInfo getStreamInfo(String streamName, StreamInfoOptions options) throws IOException, JetStreamApiException;
 
     /**
@@ -144,6 +156,16 @@ public interface JetStreamManagement {
      * @throws JetStreamApiException the request had an error related to the data such as the consumer does not already exist
      */
     ConsumerInfo updateConsumer(String streamName, ConsumerConfiguration config) throws IOException, JetStreamApiException;
+
+    /**
+     * Updates an existing consumer. Must already exist.
+     * @param ccr the request specifying the consumer create information and how to make the request information
+     * @return consumer information.
+     * @throws IOException covers various communication issues with the NATS
+     *         server such as timeout or interruption
+     * @throws JetStreamApiException the request had an error related to the data such as the consumer does not already exist
+     */
+    ConsumerInfo createOrUpdateConsumer(ConsumerCreateRequest ccr) throws IOException, JetStreamApiException;
 
     /**
      * Deletes a consumer.

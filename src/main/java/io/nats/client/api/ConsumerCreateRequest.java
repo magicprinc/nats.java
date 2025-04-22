@@ -35,20 +35,102 @@ public class ConsumerCreateRequest implements JsonSerializable {
         }
     }
 
-    private final String streamName;
-    private final ConsumerConfiguration config;
-    private final Action action;
+    public final String streamName;
+    public final ConsumerConfiguration config;
+    public final Action action;
+    public final boolean pedantic;
 
-    public ConsumerCreateRequest(String streamName, ConsumerConfiguration config) {
-        this.streamName = streamName;
-        this.config = config;
-        this.action = Action.CreateOrUpdate;
+    /**
+     * Instantiate a ConsumerCreateRequest with Action.Create and pedantic=false
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @return a ConsumerCreateRequest
+     */
+    public static ConsumerCreateRequest create(String streamName, ConsumerConfiguration config) {
+        return new ConsumerCreateRequest(streamName, config, Action.Create, false);
     }
 
+    /**
+     * Instantiate a ConsumerCreateRequest with Action.Create and pedantic=true
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @return a ConsumerCreateRequest
+     */
+    public static ConsumerCreateRequest createPedantic(String streamName, ConsumerConfiguration config) {
+        return new ConsumerCreateRequest(streamName, config, Action.Create, true);
+    }
+
+    /**
+     * Instantiate a ConsumerCreateRequest with Action.Update and pedantic=false
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @return a ConsumerCreateRequest
+     */
+    public static ConsumerCreateRequest update(String streamName, ConsumerConfiguration config) {
+        return new ConsumerCreateRequest(streamName, config, Action.Update, false);
+    }
+
+    /**
+     * Instantiate a ConsumerCreateRequest with Action.Update and pedantic=true
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @return a ConsumerCreateRequest
+     */
+    public static ConsumerCreateRequest updatePedantic(String streamName, ConsumerConfiguration config) {
+        return new ConsumerCreateRequest(streamName, config, Action.Update, true);
+    }
+
+    /**
+     * Instantiate a ConsumerCreateRequest with Action.CreateOrUpdate and pedantic=false
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @return a ConsumerCreateRequest
+     */
+    public static ConsumerCreateRequest createOrUpdate(String streamName, ConsumerConfiguration config) {
+        return new ConsumerCreateRequest(streamName, config, Action.CreateOrUpdate, false);
+    }
+
+    /**
+     * Instantiate a ConsumerCreateRequest with Action.CreateOrUpdate and pedantic=true
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @return a ConsumerCreateRequest
+     */
+    public static ConsumerCreateRequest createOrUpdatePedantic(String streamName, ConsumerConfiguration config) {
+        return new ConsumerCreateRequest(streamName, config, Action.CreateOrUpdate, true);
+    }
+
+    /**
+     * Instantiate a ConsumerCreateRequest with Action.CreateOrUpdate and pedantic=false
+     * @param streamName the stream name
+     * @param config the consumer config
+     */
+    public ConsumerCreateRequest(String streamName, ConsumerConfiguration config) {
+        this(streamName, config, Action.CreateOrUpdate, false);
+    }
+
+    /**
+     * Instantiate a ConsumerCreateRequest with pedantic=false
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @param action the type of action. Null is considered to be CreateOrUpdate
+     */
     public ConsumerCreateRequest(String streamName, ConsumerConfiguration config, Action action) {
+        this(streamName, config, action, false);
+    }
+
+    /**
+     * Instantiate a ConsumerCreateRequest with pedantic=false
+     * @param streamName the stream name
+     * @param config the consumer config
+     * @param action the type of action. Null is considered to be CreateOrUpdate
+     * @param pedantic the pedantic flag
+     */
+    public ConsumerCreateRequest(String streamName, ConsumerConfiguration config, Action action, boolean pedantic) {
         this.streamName = streamName;
         this.config = config;
-        this.action = action;
+        this.action = action == null ? Action.CreateOrUpdate : action;
+        this.pedantic = pedantic;
     }
 
     public String getStreamName() {
@@ -63,6 +145,10 @@ public class ConsumerCreateRequest implements JsonSerializable {
         return action;
     }
 
+    public boolean isPedantic() {
+        return pedantic;
+    }
+
     @Override
     public String toJson() {
         StringBuilder sb = beginJson();
@@ -70,6 +156,7 @@ public class ConsumerCreateRequest implements JsonSerializable {
         addField(sb, STREAM_NAME, streamName);
         JsonUtils.addField(sb, ACTION, action.actionText);
         JsonUtils.addField(sb, CONFIG, config);
+        JsonUtils.addFldWhenTrue(sb, PEDANTIC, pedantic);
 
         return endJson(sb).toString();
     }
@@ -77,8 +164,9 @@ public class ConsumerCreateRequest implements JsonSerializable {
     @Override
     public String toString() {
         return "ConsumerCreateRequest{" +
-                "streamName='" + streamName + '\'' +
-                ", " + config +
-                '}';
+            "streamName='" + streamName + '\'' +
+            "pedantic='" + pedantic + '\'' +
+            ", " + config +
+            '}';
     }
 }

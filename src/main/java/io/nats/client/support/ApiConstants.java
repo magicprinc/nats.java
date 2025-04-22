@@ -158,6 +158,7 @@ public interface ApiConstants {
     String PAUSED            = "paused";
     String PAUSE_REMAINING   = "pause_remaining";
     String PAUSE_UNTIL       = "pause_until";
+    String PEDANTIC          = "pedantic";
     String PLACEMENT         = "placement";
     String PORT              = "port";
     String PRIORITY_GROUPS   = "priority_groups";

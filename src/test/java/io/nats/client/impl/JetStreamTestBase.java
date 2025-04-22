@@ -150,6 +150,14 @@ public class JetStreamTestBase extends TestBase {
         }
     }
 
+    public static StreamInfo createOrReplaceMemoryStream(JetStreamManagement jsm, String streamName, String... subjects) throws IOException, JetStreamApiException {
+        try {
+            jsm.deleteStream(streamName);
+        }
+        catch (Exception ignore) {}
+        return createMemoryStream(jsm, streamName, subjects);
+    }
+
     public static StreamInfo createMemoryStream(JetStreamManagement jsm, String streamName, String... subjects) throws IOException, JetStreamApiException {
         if (streamName == null) {
             streamName = stream();

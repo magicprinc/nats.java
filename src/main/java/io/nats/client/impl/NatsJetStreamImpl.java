@@ -90,21 +90,22 @@ class NatsJetStreamImpl implements NatsJetStreamConstants {
         return new ConsumerInfo(resp).throwOnHasError();
     }
 
-    ConsumerInfo _createConsumer(String streamName, ConsumerConfiguration config, ConsumerCreateRequest.Action action) throws IOException, JetStreamApiException {
+    ConsumerInfo _createConsumer(ConsumerCreateRequest ccr) throws IOException, JetStreamApiException {
+
         // ConsumerConfiguration validates that name and durable are the same if both are supplied.
-        String consumerName = config.getName();
+        String consumerName = ccr.config.getName();
         if (consumerName != null && !consumerCreate290Available) {
             throw JsConsumerCreate290NotAvailable.instance();
         }
 
-        boolean hasMultipleFilterSubjects = config.hasMultipleFilterSubjects();
+        boolean hasMultipleFilterSubjects = ccr.config.hasMultipleFilterSubjects();
 
         // seems strange that this could happen, but checking anyway...
         if (hasMultipleFilterSubjects && !multipleSubjectFilter210Available) {
             throw JsMultipleFilterSubjects210NotAvailable.instance();
         }
 
-        String durable = config.getDurable();
+        String durable = ccr.config.getDurable();
         String subj;
         // new consumer create not available before 290 and can't be used with multiple filter subjects
         if (consumerCreate290Available && !hasMultipleFilterSubjects) {
@@ -112,29 +113,29 @@ class NatsJetStreamImpl implements NatsJetStreamConstants {
                 // if both consumerName and durable are null, generate a name
                 consumerName = durable == null ? generateConsumerName() : durable;
             }
-            String fs = config.getFilterSubject(); // we've already determined not multiple so this gives us 1 or null
+            String fs = ccr.config.getFilterSubject(); // we've already determined not multiple so this gives us 1 or null
             if (fs == null || fs.equals(GREATER_THAN)) {
-                subj = String.format(JSAPI_CONSUMER_CREATE_V290, streamName, consumerName);
+                subj = String.format(JSAPI_CONSUMER_CREATE_V290, ccr.streamName, consumerName);
             }
             else {
-                subj = String.format(JSAPI_CONSUMER_CREATE_V290_W_FILTER, streamName, consumerName, fs);
+                subj = String.format(JSAPI_CONSUMER_CREATE_V290_W_FILTER, ccr.streamName, consumerName, fs);
             }
         }
         else if (durable == null) {
-            subj = String.format(JSAPI_CONSUMER_CREATE, streamName);
+            subj = String.format(JSAPI_CONSUMER_CREATE, ccr.streamName);
         }
         else {
-            subj = String.format(JSAPI_DURABLE_CREATE, streamName, durable);
+            subj = String.format(JSAPI_DURABLE_CREATE, ccr.streamName, durable);
         }
 
-        ConsumerCreateRequest ccr = new ConsumerCreateRequest(streamName, config, action);
         Message resp = makeRequestResponseRequired(subj, ccr.serialize(), getTimeout());
         return new ConsumerInfo(resp).throwOnHasError();
     }
 
     void _createConsumerUnsubscribeOnException(String stream, ConsumerConfiguration cc, NatsJetStreamSubscription sub) throws IOException, JetStreamApiException {
         try {
-            ConsumerInfo ci = _createConsumer(stream, cc, ConsumerCreateRequest.Action.CreateOrUpdate);
+            ConsumerInfo ci = _createConsumer(ConsumerCreateRequest.createOrUpdate(stream, cc));
+
             sub.setConsumerName(ci.getName());
         }
         catch (IOException | JetStreamApiException e) {

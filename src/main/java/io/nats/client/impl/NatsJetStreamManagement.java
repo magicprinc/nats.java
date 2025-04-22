@@ -45,7 +45,7 @@ public class NatsJetStreamManagement extends NatsJetStreamImpl implements JetStr
      */
     @Override
     public StreamInfo addStream(StreamConfiguration config) throws IOException, JetStreamApiException {
-        return addOrUpdateStream(config, JSAPI_STREAM_CREATE);
+        return createOrUpdateStream(config, StreamManagementOptions.create());
     }
 
     /**
@@ -53,18 +53,23 @@ public class NatsJetStreamManagement extends NatsJetStreamImpl implements JetStr
      */
     @Override
     public StreamInfo updateStream(StreamConfiguration config) throws IOException, JetStreamApiException {
-        return addOrUpdateStream(config, JSAPI_STREAM_UPDATE);
+        return createOrUpdateStream(config, StreamManagementOptions.update());
     }
 
-    private StreamInfo addOrUpdateStream(StreamConfiguration config, String template) throws IOException, JetStreamApiException {
+    @Override
+    public StreamInfo createOrUpdateStream(StreamConfiguration config, StreamManagementOptions streamCrudOptions) throws IOException, JetStreamApiException {
         validateNotNull(config, "Configuration");
         String streamName = config.getName();
         if (nullOrEmpty(streamName)) {
             throw new IllegalArgumentException("Configuration must have a valid stream name");
         }
 
-        String subj = String.format(template, streamName);
-        Message resp = makeRequestResponseRequired(subj, config.toJson().getBytes(StandardCharsets.UTF_8), getTimeout());
+        String subj = String.format(streamCrudOptions.getJsApiTemplate(), streamName);
+        String payload = config.toJson();
+        if (streamCrudOptions.isPedantic()) {
+            payload = "{\"pedantic\":true," + payload.substring(1);
+        }
+        Message resp = makeRequestResponseRequired(subj, payload.getBytes(StandardCharsets.UTF_8), getTimeout());
         return createAndCacheStreamInfoThrowOnError(streamName, resp);
     }
 
@@ -128,7 +133,7 @@ public class NatsJetStreamManagement extends NatsJetStreamImpl implements JetStr
     public ConsumerInfo addOrUpdateConsumer(String streamName, ConsumerConfiguration config) throws IOException, JetStreamApiException {
         validateStreamName(streamName, true);
         validateNotNull(config, "Config");
-        return _createConsumer(streamName, config, ConsumerCreateRequest.Action.CreateOrUpdate);
+        return _createConsumer(ConsumerCreateRequest.createOrUpdate(streamName, config));
     }
 
     /**
@@ -138,7 +143,7 @@ public class NatsJetStreamManagement extends NatsJetStreamImpl implements JetStr
     public ConsumerInfo createConsumer(String streamName, ConsumerConfiguration config) throws IOException, JetStreamApiException {
         validateStreamName(streamName, true);
         validateNotNull(config, "Config");
-        return _createConsumer(streamName, config, ConsumerCreateRequest.Action.Create);
+        return _createConsumer(ConsumerCreateRequest.create(streamName, config));
     }
 
     /**
@@ -148,7 +153,17 @@ public class NatsJetStreamManagement extends NatsJetStreamImpl implements JetStr
     public ConsumerInfo updateConsumer(String streamName, ConsumerConfiguration config) throws IOException, JetStreamApiException {
         validateStreamName(streamName, true);
         validateNotNull(config, "Config");
-        return _createConsumer(streamName, config, ConsumerCreateRequest.Action.Update);
+        return _createConsumer(ConsumerCreateRequest.update(streamName, config));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ConsumerInfo createOrUpdateConsumer(ConsumerCreateRequest ccr) throws IOException, JetStreamApiException {
+        validateStreamName(ccr.streamName, true);
+        validateNotNull(ccr.config, "Config");
+        return _createConsumer(ccr);
     }
 
     /**

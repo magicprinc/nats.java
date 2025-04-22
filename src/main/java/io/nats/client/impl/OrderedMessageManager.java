@@ -99,7 +99,7 @@ class OrderedMessageManager extends PushMessageManager {
             // 3. make a new consumer using the same deliver subject but
             //    with a new starting point
             ConsumerConfiguration userCC = js.consumerConfigurationForOrdered(originalCc, lastStreamSeq, newDeliverSubject, actualConsumerName, null);
-            ConsumerInfo ci = js._createConsumer(stream, userCC, ConsumerCreateRequest.Action.Create); // this can fail when a server is down.
+            ConsumerInfo ci = js._createConsumer(ConsumerCreateRequest.create(stream, userCC)); // this can fail when a server is down.
             sub.setConsumerName(ci.getName());
 
             // 4. restart the manager.
