@@ -1,4 +1,4 @@
-// Copyright 2015-2018 The NATS Authors
+// Copyright 2015-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
@@ -15,6 +15,7 @@ package io.nats.client;
 
 import io.nats.client.api.ServerInfo;
 import io.nats.client.support.Status;
+import org.jspecify.annotations.Nullable;
 
 /**
  * This library groups problems into four categories:
@@ -41,7 +42,7 @@ public interface ErrorListener {
      * @param conn The connection associated with the error
      * @param error The text of error that has occurred, directly from the server
      */
-    default void errorOccurred(Connection conn, String error) {};
+    default void errorOccurred(Connection conn, String error) {}
 
     /**
      * Exceptions that occur in the "normal" course of operations are sent to the
@@ -53,7 +54,7 @@ public interface ErrorListener {
      * @param conn The connection associated with the error
      * @param exp The exception that has occurred, and was handled by the library
      */
-    default void exceptionOccurred(Connection conn, Exception exp) {};
+    default void exceptionOccurred(Connection conn, Exception exp) {}
 
     /**
      * Called by the connection when a &quot;slow&quot; consumer is detected. This call is only made once
@@ -69,7 +70,7 @@ public interface ErrorListener {
      * @param conn The connection associated with the error
      * @param consumer The consumer that is being marked slow
      */
-    default void slowConsumerDetected(Connection conn, Consumer consumer) {};
+    default void slowConsumerDetected(Connection conn, Consumer consumer) {}
 
     /**
      * Called by the connection when a message is discarded.
@@ -148,7 +149,7 @@ public interface ErrorListener {
      *              to the message like ", foo: &lt;fooValue&gt;, bar-&lt;barValue&gt;".
      * @return the message
      */
-    default String supplyMessage(String label, Connection conn, Consumer consumer, Subscription sub, Object... pairs) {
+    default String supplyMessage(String label, Connection conn, @Nullable Consumer consumer, @Nullable Subscription sub, Object... pairs) {
         StringBuilder sb = new StringBuilder(label == null ? "" : label);
         if (conn != null) {
             ServerInfo si = conn.getServerInfo();

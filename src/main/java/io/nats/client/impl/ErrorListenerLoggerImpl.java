@@ -1,4 +1,4 @@
-// Copyright 2021 The NATS Authors
+// Copyright 2021-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
@@ -13,93 +13,66 @@
 
 package io.nats.client.impl;
 
-import io.nats.client.*;
+import io.nats.client.Connection;
+import io.nats.client.Consumer;
+import io.nats.client.ErrorListener;
+import io.nats.client.JetStreamSubscription;
+import io.nats.client.Message;
 import io.nats.client.support.Status;
+import lombok.CustomLog;
 
-import java.util.logging.Logger;
-
+@CustomLog
 public class ErrorListenerLoggerImpl implements ErrorListener {
 
-    private final static Logger LOGGER = Logger.getLogger(ErrorListenerLoggerImpl.class.getName());
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void errorOccurred(final Connection conn, final String error) {
-        LOGGER.severe(() -> supplyMessage("errorOccurred", conn, null, null, "Error: ", error));
+    public void errorOccurred(Connection conn, String error) {
+        logger.severe(() -> supplyMessage("errorOccurred", conn, null, null, "Error: ", error));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void exceptionOccurred(final Connection conn, final Exception exp) {
-        LOGGER.severe(() -> supplyMessage("exceptionOccurred", conn, null, null, "Exception: ", exp));
+    public void exceptionOccurred(Connection conn, Exception exp) {
+        logger.severe(() -> supplyMessage("exceptionOccurred", conn, null, null, "Exception: ", exp));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void slowConsumerDetected(final Connection conn, final Consumer consumer) {
-        LOGGER.warning(() -> supplyMessage("slowConsumerDetected", conn, consumer, null));
+    public void slowConsumerDetected(Connection conn, Consumer consumer) {
+        logger.warning(() -> supplyMessage("slowConsumerDetected", conn, consumer, null));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void messageDiscarded(final Connection conn, final Message msg) {
-        LOGGER.info(() -> supplyMessage("messageDiscarded", conn, null, null, "Message: ", msg));
+    public void messageDiscarded(Connection conn, Message msg) {
+        logger.info(() -> supplyMessage("messageDiscarded", conn, null, null, "Message: ", msg));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void heartbeatAlarm(final Connection conn, final JetStreamSubscription sub,
-                               final long lastStreamSequence, final long lastConsumerSequence) {
-        LOGGER.severe(() -> supplyMessage("heartbeatAlarm", conn, null, sub, "lastStreamSequence: ", lastStreamSequence, "lastConsumerSequence: ", lastConsumerSequence));
+    public void heartbeatAlarm (
+            Connection conn, JetStreamSubscription sub, long lastStreamSequence, long lastConsumerSequence
+    ){
+        logger.severe(() -> supplyMessage("heartbeatAlarm", conn, null, sub, "lastStreamSequence: ", lastStreamSequence, "lastConsumerSequence: ", lastConsumerSequence));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void unhandledStatus(final Connection conn, final JetStreamSubscription sub, final Status status) {
-        LOGGER.warning(() -> supplyMessage("unhandledStatus", conn, null, sub, "Status:", status));
+    public void unhandledStatus(Connection conn, JetStreamSubscription sub, Status status) {
+        logger.warning(() -> supplyMessage("unhandledStatus", conn, null, sub, "Status:", status));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void pullStatusWarning(Connection conn, JetStreamSubscription sub, Status status) {
-        LOGGER.warning(() -> supplyMessage("pullStatusWarning", conn, null, sub, "Status:", status));
+        logger.warning(() -> supplyMessage("pullStatusWarning", conn, null, sub, "Status:", status));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void pullStatusError(Connection conn, JetStreamSubscription sub, Status status) {
-        LOGGER.severe(() -> supplyMessage("pullStatusError", conn, null, sub, "Status:", status));
+        logger.severe(() -> supplyMessage("pullStatusError", conn, null, sub, "Status:", status));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void flowControlProcessed(Connection conn, JetStreamSubscription sub, String id, FlowControlSource source) {
-        LOGGER.info(() -> supplyMessage("flowControlProcessed", conn, null, sub, "FlowControlSource:", source));
+    public void flowControlProcessed(Connection conn, JetStreamSubscription sub, String idAkaSubject, FlowControlSource source) {
+        logger.info(() -> supplyMessage("flowControlProcessed", conn, null, sub, "FlowControlSource:", source));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void socketWriteTimeout(Connection conn) {
-        LOGGER.severe(() -> supplyMessage("socketWriteTimeout", conn, null, null));
+        logger.severe(() -> supplyMessage("socketWriteTimeout", conn, null, null));
     }
 }

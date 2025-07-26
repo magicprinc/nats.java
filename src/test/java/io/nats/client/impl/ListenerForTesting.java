@@ -13,13 +13,22 @@
 
 package io.nats.client.impl;
 
-import io.nats.client.*;
+import io.nats.client.Connection;
+import io.nats.client.ConnectionListener;
+import io.nats.client.Consumer;
+import io.nats.client.ErrorListener;
+import io.nats.client.JetStreamSubscription;
+import io.nats.client.Message;
 import io.nats.client.support.Status;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -151,6 +160,7 @@ public class ListenerForTesting implements ErrorListener, ConnectionListener {
         return waitForBooleanFuture(statusChanged, timeout, units);
     }
 
+    @Override
     public void exceptionOccurred(Connection conn, Exception exp) {
         lastEventConnection = conn;
         exceptions.add(exp);
@@ -198,6 +208,7 @@ public class ListenerForTesting implements ErrorListener, ConnectionListener {
         return _eventually(timeout, () -> copy(errors), (s) -> s.contains(contains));
     }
 
+    @Override
     public void errorOccurred(Connection conn, String errorText) {
         lastEventConnection = conn;
         add(errors, errorText);
@@ -218,6 +229,7 @@ public class ListenerForTesting implements ErrorListener, ConnectionListener {
         }
     }
 
+    @Override
     public void messageDiscarded(Connection conn, Message msg) {
         lastEventConnection = conn;
         count.incrementAndGet();
@@ -262,6 +274,7 @@ public class ListenerForTesting implements ErrorListener, ConnectionListener {
         return slowSubscriber;
     }
 
+    @Override
     public void slowConsumerDetected(Connection conn, Consumer consumer) {
         count.incrementAndGet();
 
