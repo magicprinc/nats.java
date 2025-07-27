@@ -20,16 +20,22 @@ import io.nats.client.support.Validator;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import static io.nats.client.support.ApiConstants.*;
+import java.util.Objects;
+
+import static io.nats.client.support.ApiConstants.DESCRIPTION;
+import static io.nats.client.support.ApiConstants.HEADERS;
+import static io.nats.client.support.ApiConstants.NAME;
+import static io.nats.client.support.ApiConstants.OPTIONS;
 import static io.nats.client.support.JsonUtils.beginJson;
 import static io.nats.client.support.JsonUtils.endJson;
-import static io.nats.client.support.JsonValueUtils.*;
+import static io.nats.client.support.JsonValueUtils.readObject;
+import static io.nats.client.support.JsonValueUtils.readString;
+import static io.nats.client.support.JsonValueUtils.readStringList;
 
 /**
  * The ObjectMeta is Object Meta is high level information about an object
  */
 public class ObjectMeta implements JsonSerializable {
-
     private final String objectName;
     private final String description;
     private final Headers headers;
@@ -47,7 +53,7 @@ public class ObjectMeta implements JsonSerializable {
         description = readString(vObjectMeta, DESCRIPTION);
         headers = new Headers();
         JsonValue hJv = readObject(vObjectMeta, HEADERS);
-        for (String key : hJv.map.keySet()) {
+        for (String key : hJv.keySet()) {
             headers.put(key, readStringList(hJv, key));
         }
 
@@ -55,8 +61,7 @@ public class ObjectMeta implements JsonSerializable {
     }
 
     @Override
-    @NonNull
-    public String toJson() {
+    public @NonNull String toJson() {
         StringBuilder sb = beginJson();
         embedJson(sb);
         return endJson(sb).toString();
@@ -74,23 +79,19 @@ public class ObjectMeta implements JsonSerializable {
         }
     }
 
-    @NonNull
-    public String getObjectName() {
+    public @NonNull String getObjectName() {
         return objectName;
     }
 
-    @Nullable
-    public String getDescription() {
+    public @Nullable String getDescription() {
         return description;
     }
 
-    @Nullable
-    public Headers getHeaders() {
+    public @Nullable Headers getHeaders() {
         return headers;
     }
 
-    @Nullable
-    public ObjectMetaOptions getObjectMetaOptions() {
+    public @Nullable ObjectMetaOptions getObjectMetaOptions() {
         return objectMetaOptions;
     }
 
@@ -173,7 +174,7 @@ public class ObjectMeta implements JsonSerializable {
         ObjectMeta that = (ObjectMeta) o;
 
         if (!objectName.equals(that.objectName)) return false;
-        if (description != null ? !description.equals(that.description) : that.description != null) return false;
+        if (!Objects.equals(description, that.description)) return false;
         if (!headers.equals(that.headers)) return false;
         return objectMetaOptions.equals(that.objectMetaOptions);
     }

@@ -103,7 +103,7 @@ public abstract class Encoding {
      * @return the decoded string
      */
     public static String base64BasicDecodeToString(String input) {
-        return new String(Base64.getDecoder().decode(input));
+        return new String(Base64.getDecoder().decode(input), StandardCharsets.UTF_8);
     }
 
     /**
@@ -130,7 +130,7 @@ public abstract class Encoding {
      * @return the decoded string
      */
     public static String base64UrlDecodeToString(String input) {
-        return new String(Base64.getUrlDecoder().decode(input));
+        return new String(Base64.getUrlDecoder().decode(input), StandardCharsets.UTF_8);
     }
 
     // http://en.wikipedia.org/wiki/Base_32
@@ -264,7 +264,7 @@ public abstract class Encoding {
     }
 
     public static String jsonEncode(String s) {
-        return jsonEncode(new StringBuilder(), s).toString();
+        return jsonEncode(new StringBuilder(s.length()+11), s).toString();
     }
 
     public static StringBuilder jsonEncode(StringBuilder sb, String s) {
@@ -276,7 +276,7 @@ public abstract class Encoding {
     }
 
     public static String jsonEncode(char[] chars) {
-        return jsonEncode(new StringBuilder(), chars).toString();
+        return jsonEncode(new StringBuilder(chars.length+11), chars).toString();
     }
 
     public static StringBuilder jsonEncode(StringBuilder sb, char[] chars) {

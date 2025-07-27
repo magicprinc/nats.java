@@ -917,7 +917,7 @@ public class ServiceTests extends JetStreamTestBase {
                             m.respond(nc, "2");
                             break;
                         case 3:
-                            m.respond(nc, new JsonValue("3"));
+                            m.respond(nc, JsonValue.of("3"));
                             break;
                         case 4:
                             m.respond(nc, "4".getBytes(), m.getHeaders());
@@ -926,7 +926,7 @@ public class ServiceTests extends JetStreamTestBase {
                             m.respond(nc, "5", m.getHeaders());
                             break;
                         case 6:
-                            m.respond(nc, new JsonValue("6"), m.getHeaders());
+                            m.respond(nc, JsonValue.of("6"), m.getHeaders());
                             break;
                         case 7:
                             // Coverage, Message Interface
@@ -1092,7 +1092,7 @@ public class ServiceTests extends JetStreamTestBase {
 
     @Test
     public void testEndpointResponseConstruction() {
-        JsonValue data = new JsonValue("data");
+        JsonValue data = JsonValue.of("data");
         EqualsVerifier.simple().forClass(EndpointStats.class)
             .withPrefabValues(JsonValue.class, data, JsonValue.NULL)
             .verify();
@@ -1484,9 +1484,9 @@ public class ServiceTests extends JetStreamTestBase {
         @NonNull
         public JsonValue toJsonValue() {
             Map<String, JsonValue> map = new HashMap<>();
-            map.put("sdata", new JsonValue(sData));
-            map.put("idata", new JsonValue(iData));
-            return new JsonValue(map);
+            map.put("sdata", JsonValue.of(sData));
+            map.put("idata", JsonValue.of(iData));
+            return JsonValue.of(map);
         }
 
         @Override

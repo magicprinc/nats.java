@@ -21,7 +21,9 @@ import org.jspecify.annotations.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.nats.client.support.ApiConstants.*;
+import static io.nats.client.support.ApiConstants.API;
+import static io.nats.client.support.ApiConstants.DOMAIN;
+import static io.nats.client.support.ApiConstants.TIERS;
 import static io.nats.client.support.JsonValueUtils.readObject;
 import static io.nats.client.support.JsonValueUtils.readString;
 
@@ -42,9 +44,10 @@ public class AccountStatistics extends ApiResponse<AccountStatistics> {
         api = new ApiStats(readObject(jv, API));
         JsonValue vTiers = readObject(jv, TIERS);
         tiers = new HashMap<>();
-        if (vTiers.map != null) {
-            for (String key : vTiers.map.keySet()) {
-                tiers.put(key, new AccountTier(vTiers.map.get(key)));
+        if (vTiers instanceof JsonValue.JVMap) {
+            for (Map.Entry<String,JsonValue> e : vTiers.entrySet()) {
+                String key = e.getKey();
+                tiers.put(key, new AccountTier(e.getValue()));
             }
         }
     }
@@ -115,8 +118,7 @@ public class AccountStatistics extends ApiResponse<AccountStatistics> {
      * Gets the account domain. May be null
      * @return the domain
      */
-    @Nullable
-    public String getDomain() {
+    public @Nullable String getDomain() {
         return domain;
     }
 
@@ -124,8 +126,7 @@ public class AccountStatistics extends ApiResponse<AccountStatistics> {
      * Gets the account api stats
      * @return the ApiStats object
      */
-    @NonNull
-    public ApiStats getApi() {
+    public @NonNull ApiStats getApi() {
         return api;
     }
 
@@ -133,8 +134,7 @@ public class AccountStatistics extends ApiResponse<AccountStatistics> {
      * Gets the map of the Account Tiers by tier name. May be empty, but never null.
      * @return the map
      */
-    @NonNull
-    public Map<String, AccountTier> getTiers() {
+    public @NonNull Map<String, AccountTier> getTiers() {
         return tiers;
     }
 }

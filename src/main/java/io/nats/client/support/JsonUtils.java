@@ -14,6 +14,8 @@
 package io.nats.client.support;
 
 import io.nats.client.impl.Headers;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -35,7 +37,8 @@ import static io.nats.client.support.NatsConstants.COLON;
  * Internal json parsing helpers.
  * Read helpers deprecated Prefer using the {@link JsonParser}
  */
-public abstract class JsonUtils {
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class JsonUtils {
     public static final String EMPTY_JSON = "{}";
 
     private static final String STRING_RE  = "\"(.+?)\"";
@@ -54,8 +57,6 @@ public abstract class JsonUtils {
     public static final String OPENQ = "{\"";
     public static final String CLOSE = "}";
 
-    private JsonUtils() {} /* ensures cannot be constructed */
-
     // ----------------------------------------------------------------------------------------------------
     // BUILD A STRING OF JSON
     // ----------------------------------------------------------------------------------------------------
@@ -63,8 +64,8 @@ public abstract class JsonUtils {
         return new StringBuilder("{");
     }
 
-    public static StringBuilder beginArray() {
-        return new StringBuilder("[");
+    static StringBuilder beginArray(int len) {
+        return new StringBuilder(len*11).append("[");
     }
 
     public static StringBuilder beginJsonPrefixed(String prefix) {
@@ -99,7 +100,7 @@ public abstract class JsonUtils {
     public static String endFormattedJson(StringBuilder sb) {
         sb.setLength(sb.length()-1);
         sb.append("\n}");
-        return sb.toString().replaceAll(",", ",\n    ");
+        return sb.toString().replace(",", ",\n    ");
     }
 
     /**
@@ -793,7 +794,7 @@ public abstract class JsonUtils {
      */
     @Deprecated
     public static List<String> getStringList(String objectName, String json) {
-        String flat = json.replaceAll("\r", "").replaceAll("\n", "");
+        String flat = json.replace("\r", "").replace("\n", "");
         Matcher m = string_array_pattern(objectName).matcher(flat);
         if (m.find()) {
             String arrayString = m.group(1);
@@ -823,7 +824,7 @@ public abstract class JsonUtils {
      */
     @Deprecated
     public static List<Long> getLongList(String objectName, String json) {
-        String flat = json.replaceAll("\r", "").replaceAll("\n", "");
+        String flat = json.replace("\r", "").replace("\n", "");
         List<Long> list = new ArrayList<>();
         Matcher m = number_array_pattern(objectName).matcher(flat);
         if (m.find()) {

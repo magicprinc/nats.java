@@ -25,7 +25,7 @@ import static io.nats.client.support.JsonValue.NULL;
 
 public class JsonParser {
 
-    enum Option {KEEP_NULLS}
+    public enum Option {KEEP_NULLS}
 
     public static JsonValue parse(char[] json) throws JsonParseException {
         return new JsonParser(json, 0).parse();
@@ -172,15 +172,15 @@ public class JsonParser {
         }
         if (c == '"') {
             nextToken();
-            return new JsonValue(nextString());
+            return JsonValue.of(nextString());
         }
         if (c == '{') {
             nextToken();
-            return new JsonValue(nextObject());
+            return JsonValue.of(nextObject());
         }
         if (c == '[') {
             nextToken();
-            return new JsonValue(nextArray());
+            return JsonValue.of(nextArray());
         }
         return nextPrimitiveValue();
     }
@@ -210,10 +210,10 @@ public class JsonParser {
         }
         String string = sb.toString();
         if ("true".equalsIgnoreCase(string)) {
-            return new JsonValue(Boolean.TRUE);
+            return JsonValue.of(Boolean.TRUE);
         }
         if ("false".equalsIgnoreCase(string)) {
-            return new JsonValue(Boolean.FALSE);
+            return JsonValue.of(Boolean.FALSE);
         }
         if ("null".equalsIgnoreCase(string)) {
             return JsonValue.NULL;
@@ -222,7 +222,7 @@ public class JsonParser {
             return asNumber(string);
         }
         catch (Exception e) {
-            throw new JsonParseException("Invalid value.");
+            throw new JsonParseException("Invalid value.", e);
         }
     }
 
@@ -391,9 +391,9 @@ public class JsonParser {
                 try {
                     BigDecimal bd = new BigDecimal(val);
                     if(initial == '-' && BigDecimal.ZERO.compareTo(bd)==0) {
-                        return new JsonValue(-0.0);
+                        return JsonValue.of(-0.0);
                     }
-                    return new JsonValue(bd);
+                    return JsonValue.of(bd);
                 } catch (NumberFormatException retryAsDouble) {
                     // this is to support "Hex Floats" like this: 0x1.0P-1074
                     try {
@@ -401,7 +401,7 @@ public class JsonParser {
                         if(Double.isNaN(d) || Double.isInfinite(d)) {
                             throw new JsonParseException("val ["+val+"] is not a valid number.");
                         }
-                        return new JsonValue(d);
+                        return JsonValue.of(d);
                     } catch (NumberFormatException ignore) {
                         throw new JsonParseException("val ["+val+"] is not a valid number.");
                     }
@@ -422,12 +422,12 @@ public class JsonParser {
             }
             BigInteger bi = new BigInteger(val);
             if(bi.bitLength() <= 31){
-                return new JsonValue(bi.intValue());
+                return JsonValue.of(bi.intValue());
             }
             if(bi.bitLength() <= 63){
-                return new JsonValue(bi.longValue());
+                return JsonValue.of(bi.longValue());
             }
-            return new JsonValue(bi);
+            return JsonValue.of(bi);
         }
         throw new JsonParseException("val ["+val+"] is not a valid number.");
     }

@@ -37,22 +37,21 @@ public abstract class ApiResponse<T> {
         this(parseMessage(msg));
     }
 
-    protected static JsonValue parseMessage(Message msg) {
+    protected static @Nullable JsonValue parseMessage(Message msg) {
         if (msg == null) {
             return null;
         }
         try {
             return JsonParser.parse(msg.getData());
-        }
-        catch (JsonParseException e) {
-            return JsonValueUtils.mapBuilder()
+        } catch (JsonParseException e) {
+            return new JsonValueUtils.MapBuilder()
                 .put(ERROR, new Error(500, "Error parsing: " + e.getMessage()))
                 .put(TYPE, PARSE_ERROR_TYPE)
                 .toJsonValue();
         }
     }
 
-    public ApiResponse(JsonValue jsonValue) {
+    public ApiResponse(@Nullable JsonValue jsonValue) {
         jv = jsonValue;
         if (jv == null) {
             error = null;
@@ -66,7 +65,7 @@ public abstract class ApiResponse<T> {
             }
             else {
                 type = temp;
-                jv.map.remove(TYPE); // just so it's not in the toString, it's very long and the object name will be there
+                jv.remove(TYPE); // just so it's not in the toString, it's very long and the object name will be there
             }
         }
     }
@@ -91,8 +90,7 @@ public abstract class ApiResponse<T> {
         return (T)this;
     }
 
-    @Nullable
-    public JsonValue getJv() {
+    public @Nullable JsonValue getJv() {
         return jv;
     }
 
@@ -100,8 +98,7 @@ public abstract class ApiResponse<T> {
         return error != null;
     }
 
-    @Nullable
-    public String getType() {
+    public @Nullable String getType() {
         return type;
     }
 
@@ -113,18 +110,15 @@ public abstract class ApiResponse<T> {
         return error == null ? Error.NOT_SET : error.getApiErrorCode();
     }
 
-    @Nullable
-    public String getDescription() {
+    public @Nullable String getDescription() {
         return error == null ? null : error.getDescription();
     }
 
-    @Nullable
-    public String getError() {
+    public @Nullable String getError() {
         return error == null ? null : error.toString();
     }
 
-    @Nullable
-    public Error getErrorObject() {
+    public @Nullable Error getErrorObject() {
         return error;
     }
 

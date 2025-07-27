@@ -63,8 +63,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
      * Get the republish configuration. Might be null.
      * @return the republish object
      */
-    @Nullable
-    public Republish getRepublish() {
+    public @Nullable Republish getRepublish() {
         return sc.getRepublish();
     }
 
@@ -72,8 +71,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
      * The mirror definition for this configuration
      * @return the mirror
      */
-    @Nullable
-    public Mirror getMirror() {
+    public @Nullable Mirror getMirror() {
         return sc.getMirror();
     }
 
@@ -81,8 +79,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
      * The sources for this configuration
      * @return the sources
      */
-    @Nullable
-    public List<Source> getSources() {
+    public @Nullable List<Source> getSources() {
         return sc.getSources();
     }
 
@@ -90,8 +87,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
      * The limit marker ttl if set
      * @return the duration
      */
-    @Nullable
-    public Duration getLimitMarkerTtl() {
+    public @Nullable Duration getLimitMarkerTtl() {
         return sc.getSubjectDeleteMarkerTtl();
     }
 
@@ -101,8 +97,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
     }
 
     @Override
-    @NonNull
-    public JsonValue toJsonValue() {
+    public JsonValue.@NonNull JVMap toJsonValue() {
         JsonValueUtils.MapBuilder mb = new JsonValueUtils.MapBuilder(super.toJsonValue());
         mb.jv.mapOrder.remove("metaData");
         mb.put("maxHistoryPerKey", getMaxHistoryPerKey());
@@ -152,6 +147,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
         extends FeatureConfiguration.Builder<Builder, KeyValueConfiguration>
     {
         Mirror mirror;
+        @Nullable
         Duration limitMarkerTtl;
         final List<Source> sources = new ArrayList<>();
 
@@ -180,7 +176,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
          * Construct the builder by copying another configuration
          * @param kvc the configuration to copy
          */
-        public Builder(KeyValueConfiguration kvc) {
+        public Builder(@Nullable KeyValueConfiguration kvc) {
             if (kvc == null) {
                 scBuilder = new StreamConfiguration.Builder();
                 maxHistoryPerKey(1);
@@ -426,6 +422,7 @@ public class KeyValueConfiguration extends FeatureConfiguration {
          * Builds the KeyValueConfiguration
          * @return the KeyValueConfiguration.
          */
+        @Override
         public KeyValueConfiguration build() {
             name = required(name, "name");
             scBuilder.name(toStreamName(name))

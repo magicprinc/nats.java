@@ -33,14 +33,12 @@ public abstract class FeatureConfiguration implements JsonSerializable {
     protected final String bucketName;
 
     @Override
-    @NonNull
-    public String toJson() {
+    public @NonNull String toJson() {
         return toJsonValue().toString();
     }
 
     @Override
-    @NonNull
-    public JsonValue toJsonValue() {
+    public JsonValue.@NonNull JVMap toJsonValue() {
         JsonValueUtils.MapBuilder mb = new JsonValueUtils.MapBuilder();
         mb.put("name", bucketName);
         mb.put("description", getDescription());
@@ -63,8 +61,7 @@ public abstract class FeatureConfiguration implements JsonSerializable {
      * Gets the stream configuration for the stream which backs the bucket
      * @return the stream configuration
      */
-    @NonNull
-    public StreamConfiguration getBackingConfig() {
+    public @NonNull StreamConfiguration getBackingConfig() {
         return sc;
     }
 
@@ -72,8 +69,7 @@ public abstract class FeatureConfiguration implements JsonSerializable {
      * Gets the name of this bucket.
      * @return the name of the bucket.
      */
-    @NonNull
-    public String getBucketName() {
+    public @NonNull String getBucketName() {
         return bucketName;
     }
 
@@ -81,8 +77,7 @@ public abstract class FeatureConfiguration implements JsonSerializable {
      * Gets the description of this bucket.
      * @return the description of the bucket.
      */
-    @Nullable
-    public String getDescription() {
+    public @Nullable String getDescription() {
         return sc.getDescription();
     }
 
@@ -98,8 +93,7 @@ public abstract class FeatureConfiguration implements JsonSerializable {
      * Gets the maximum age for a value in this bucket.
      * @return the maximum age.
      */
-    @Nullable
-    public Duration getTtl() {
+    public @Nullable Duration getTtl() {
         return sc.getMaxAge();
     }
 
@@ -107,8 +101,7 @@ public abstract class FeatureConfiguration implements JsonSerializable {
      * Gets the storage type for this bucket.
      * @return the storage type for this stream.
      */
-    @Nullable
-    public StorageType getStorageType() {
+    public @Nullable StorageType getStorageType() {
         return sc.getStorageType();
     }
 
@@ -125,8 +118,7 @@ public abstract class FeatureConfiguration implements JsonSerializable {
      * random placement when unset
      * @return the placement [directive object]
      */
-    @Nullable
-    public Placement getPlacement() {
+    public @Nullable Placement getPlacement() {
         return sc.getPlacement();
     }
 
@@ -142,12 +134,11 @@ public abstract class FeatureConfiguration implements JsonSerializable {
      * Get the metadata for the feature
      * @return the metadata map. Might be null.
      */
-    @Nullable
-    public Map<String, String> getMetadata() {
+    public @Nullable Map<String, String> getMetadata() {
         return sc.getMetadata();
     }
 
-    protected static abstract class Builder<B, FC> {
+    protected abstract static class Builder<B, FC> {
         protected String name;
         protected Duration ttl = Duration.ZERO;
         protected StreamConfiguration.Builder scBuilder;

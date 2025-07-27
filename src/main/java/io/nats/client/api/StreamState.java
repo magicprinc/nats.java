@@ -23,8 +23,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.nats.client.support.ApiConstants.*;
-import static io.nats.client.support.JsonValueUtils.*;
+import static io.nats.client.support.ApiConstants.BYTES;
+import static io.nats.client.support.ApiConstants.CONSUMER_COUNT;
+import static io.nats.client.support.ApiConstants.DELETED;
+import static io.nats.client.support.ApiConstants.FIRST_SEQ;
+import static io.nats.client.support.ApiConstants.FIRST_TS;
+import static io.nats.client.support.ApiConstants.LAST_SEQ;
+import static io.nats.client.support.ApiConstants.LAST_TS;
+import static io.nats.client.support.ApiConstants.LOST;
+import static io.nats.client.support.ApiConstants.MESSAGES;
+import static io.nats.client.support.ApiConstants.NUM_DELETED;
+import static io.nats.client.support.ApiConstants.NUM_SUBJECTS;
+import static io.nats.client.support.ApiConstants.SUBJECTS;
+import static io.nats.client.support.JsonValueUtils.getLong;
+import static io.nats.client.support.JsonValueUtils.readDate;
+import static io.nats.client.support.JsonValueUtils.readLong;
+import static io.nats.client.support.JsonValueUtils.readLongList;
+import static io.nats.client.support.JsonValueUtils.readValue;
 
 public class StreamState {
     private final long msgs;
@@ -57,9 +72,10 @@ public class StreamState {
         subjects = new ArrayList<>();
         subjectMap = new HashMap<>();
         JsonValue vSubjects = readValue(vStreamState, SUBJECTS);
-        if (vSubjects != null && vSubjects.map != null) {
-            for (String subject : vSubjects.map.keySet()) {
-                Long count = getLong(vSubjects.map.get(subject));
+        if (vSubjects instanceof JsonValue.JVMap) {
+            for (Map.Entry<String,JsonValue> e : vSubjects.entrySet()) {
+                String subject = e.getKey();
+                Long count = getLong(e.getValue());
                 if (count != null) {
                     subjects.add(new Subject(subject, count));
                     subjectMap.put(subject, count);
@@ -99,8 +115,7 @@ public class StreamState {
      *
      * @return the first time
      */
-    @Nullable
-    public ZonedDateTime getFirstTime() {
+    public @Nullable ZonedDateTime getFirstTime() {
         return firstTime;
     }
 
@@ -118,8 +133,7 @@ public class StreamState {
      *
      * @return the first time
      */
-    @Nullable
-    public ZonedDateTime getLastTime() {
+    public @Nullable ZonedDateTime getLastTime() {
         return lastTime;
     }
 
@@ -146,8 +160,7 @@ public class StreamState {
      * if the Stream Info request did not ask for subjects or if there are no subjects.
      * @return the list of subjects
      */
-    @NonNull
-    public List<Subject> getSubjects() {
+    public @NonNull List<Subject> getSubjects() {
         return subjects;
     }
 
@@ -155,8 +168,7 @@ public class StreamState {
      * Get a map of subjects instead of a list of Subject objects. May be empty.
      * @return the map
      */
-    @NonNull
-    public Map<String, Long> getSubjectMap() {
+    public @NonNull Map<String, Long> getSubjectMap() {
         return subjectMap;
     }
 
@@ -174,8 +186,7 @@ public class StreamState {
      * or if there are no subjects.
      * @return the list of subjects
      */
-    @NonNull
-    public List<Long> getDeleted() {
+    public @NonNull List<Long> getDeleted() {
         return deletedStreamSequences;
     }
 
@@ -183,8 +194,7 @@ public class StreamState {
      * Get the lost stream data information if available.
      * @return the LostStreamData
      */
-    @Nullable
-    public LostStreamData getLostStreamData() {
+    public @Nullable LostStreamData getLostStreamData() {
         return lostStreamData;
     }
 

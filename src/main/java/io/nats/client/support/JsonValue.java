@@ -1,4 +1,4 @@
-// Copyright 2023 The NATS Authors
+// Copyright 2023-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
@@ -13,267 +13,317 @@
 
 package io.nats.client.support;
 
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-import static io.nats.client.support.JsonUtils.*;
+import static io.nats.client.support.JsonUtils.addField;
+import static io.nats.client.support.JsonUtils.beginArray;
+import static io.nats.client.support.JsonUtils.beginJson;
+import static io.nats.client.support.JsonUtils.endArray;
+import static io.nats.client.support.JsonUtils.endJson;
 
-public class JsonValue implements JsonSerializable {
+@SuppressWarnings("unchecked")
+public interface JsonValue extends JsonSerializable {
+    String NULL_STR = "null";
 
-    public enum Type {
-        STRING, BOOL, INTEGER, LONG, DOUBLE, FLOAT, BIG_DECIMAL, BIG_INTEGER, MAP, ARRAY, NULL;
-    }
+    JsonValue NULL = new JsonValue(){
+        @Override public @Nullable Object value() { return null; }
+        @Override public @NonNull String toJson() { return NULL_STR; }
+        @Override public int size() { return 0; }
+        @Override public boolean equals(Object o) { return this == o; }
+        @Override public int hashCode() { return 0; }
+        @Override public String toString() { return toJson(); }
+    };
+    JVBool TRUE = new JsonValue.JVBool(true);
+    JVBool FALSE = new JsonValue.JVBool(false);
+    JVArray EMPTY_ARRAY = new JVArray(Collections.emptyList());
+    JVMap EMPTY_MAP = new JVMap(Collections.emptyMap());
 
-    private static final char QUOTE = '"';
-    private static final char COMMA = ',';
-    private static final String NULL_STR = "null";
+    <T> T value();
+    @Override @NonNull String toJson();
+    default int size() { return 1; }
+    default boolean isEmpty() { return size() <= 0; }
+    default Set<String> keySet() { return Collections.emptySet(); }
+    default Set<Map.Entry<String,JsonValue>> entrySet() { return Collections.emptySet(); }
+    default void remove(String key) {}
 
-    public static final JsonValue NULL = new JsonValue();
-    public static final JsonValue TRUE = new JsonValue(true);
-    public static final JsonValue FALSE = new JsonValue(false);
-    public static final JsonValue EMPTY_MAP = new JsonValue(Collections.unmodifiableMap(new HashMap<>()));
-    public static final JsonValue EMPTY_ARRAY = new JsonValue(Collections.unmodifiableList(new ArrayList<>()));
-
-    public final String string;
-    public final Boolean bool;
-    public final Integer i;
-    public final Long l;
-    public final Double d;
-    public final Float f;
-    public final BigDecimal bd;
-    public final BigInteger bi;
-    public final Map<String, JsonValue> map;
-    public final List<JsonValue> array;
-    public final Type type;
-    public final Object object;
-    public final Number number;
-
-    public final List<String> mapOrder;
-
-    public JsonValue() {
-        this(null, null, null, null, null, null, null, null, null, null);
-    }
-
-    public JsonValue(String string) {
-        this(string, null, null, null, null, null, null, null, null, null);
-    }
-
-    public JsonValue(char c) {
-        this("" + c, null, null, null, null, null, null, null, null, null);
-    }
-
-    public JsonValue(Boolean bool) {
-        this(null, bool, null, null, null, null, null, null, null, null);
-    }
-
-    public JsonValue(int i) {
-        this(null, null, i, null, null, null, null, null, null, null);
-    }
-
-    public JsonValue(long l) {
-        this(null, null, null, l, null, null, null, null, null, null);
-    }
-
-    public JsonValue(double d) {
-        this(null, null, null, null, d, null, null, null, null, null);
-    }
-
-    public JsonValue(float f) {
-        this(null, null, null, null, null, f, null, null, null, null);
-    }
-
-    public JsonValue(BigDecimal bd) {
-        this(null, null, null, null, null, null, bd, null, null, null);
-    }
-
-    public JsonValue(BigInteger bi) {
-        this(null, null, null, null, null, null, null, bi, null, null);
-    }
-
-    public JsonValue(Map<String, JsonValue> map) {
-        this(null, null, null, null, null, null, null, null, map, null);
-    }
-
-    public JsonValue(List<JsonValue> list) {
-        this(null, null, null, null, null, null, null, null, null, list);
-    }
-
-    public JsonValue(JsonValue[] values) {
-        this(null, null, null, null, null, null, null, null, null, values == null ? null : Arrays.asList(values));
-    }
-
-    private JsonValue(String string, Boolean bool, Integer i, Long l, Double d, Float f, BigDecimal bd, BigInteger bi, Map<String, JsonValue> map, List<JsonValue> array) {
-        this.map = map;
-        mapOrder = new ArrayList<>();
-        this.array = array;
-        this.string = string;
-        this.bool = bool;
-        this.i = i;
-        this.l = l;
-        this.d = d;
-        this.f = f;
-        this.bd = bd;
-        this.bi = bi;
-        if (i != null) {
-            this.type = Type.INTEGER;
-            number = i;
-            object = number;
-        }
-        else if (l != null) {
-            this.type = Type.LONG;
-            number = l;
-            object = number;
-        }
-        else if (d != null) {
-            this.type = Type.DOUBLE;
-            number = this.d;
-            object = number;
-        }
-        else if (f != null) {
-            this.type = Type.FLOAT;
-            number = this.f;
-            object = number;
-        }
-        else if (bd != null) {
-            this.type = Type.BIG_DECIMAL;
-            number = this.bd;
-            object = number;
-        }
-        else if (bi != null) {
-            this.type = Type.BIG_INTEGER;
-            number = this.bi;
-            object = number;
-        }
-        else {
-            number = null;
-            if (map != null) {
-                this.type = Type.MAP;
-                object = map;
-            }
-            else if (string != null) {
-                this.type = Type.STRING;
-                object = string;
-            }
-            else if (bool != null) {
-                this.type = Type.BOOL;
-                object = bool;
-            }
-            else if (array != null) {
-                this.type = Type.ARRAY;
-                object = array;
-            }
-            else {
-                this.type = Type.NULL;
-                object = null;
-            }
-        }
-    }
-
-    public String toString(Class<?> c) {
+    default String toString(Class<?> c) {
         return toString(c.getSimpleName());
     }
 
-    public String toString(String key) {
-        return QUOTE + key + QUOTE + ":" + toJson();
+    default String toString(String key) {
+        return '"' + key + "\":" + toJson();
     }
 
-    @Override
-    public String toString() {
-        return toJson();
+    @Override default @NonNull JsonValue toJsonValue() { return this; }
+
+    default @Nullable Boolean bool() {
+        return value() instanceof Boolean ? (Boolean)value() : null;
     }
 
-    @Override
-    @NonNull
-    public JsonValue toJsonValue() {
-        return this;
+    default @Nullable String string() {
+        return value() instanceof String ? (String)value() : null;
     }
 
-    @Override
-    @NonNull
-    public String toJson() {
-        switch (type) {
-            case STRING:      return valueString(string);
-            case BOOL:        return valueString(bool);
-            case MAP:         return valueString(map);
-            case ARRAY:       return valueString(array);
-            case INTEGER:     return i.toString();
-            case LONG:        return l.toString();
-            case DOUBLE:      return d.toString();
-            case FLOAT:       return f.toString();
-            case BIG_DECIMAL: return bd.toString();
-            case BIG_INTEGER: return bi.toString();
-            default:          return NULL_STR;
+    default @Nullable Integer i() {
+        return value() instanceof Integer ? (Integer) value() : null;
+    }
+
+    default @Nullable Long l() {
+        return value() instanceof Long ? (Long) value() : null;
+    }
+
+    default @Nullable Double d() {
+        return value() instanceof Double ? (Double) value() : null;
+    }
+
+    default @Nullable Float f() {
+        return value() instanceof Float ? (Float) value() : null;
+    }
+
+    default @Nullable BigDecimal bd() {
+        return value() instanceof BigDecimal ? (BigDecimal) value() : null;
+    }
+
+    default @Nullable BigInteger bi() {
+        return value() instanceof BigInteger ? (BigInteger) value() : null;
+    }
+
+    default @Nullable List<@NonNull JsonValue> array() {
+        return value() instanceof List ? (List<JsonValue>) value() : null;
+    }
+
+    default @Nullable Map<String,JsonValue> map() {
+        return value() instanceof Map ? (Map<String,JsonValue>) value() : null;
+    }
+    
+
+    static JsonValue of(@Nullable Boolean v) {
+        return v == null ? NULL
+                : v ? TRUE : FALSE;
+    }
+
+    static JsonValue of(@Nullable String v) {
+        return v == null ? NULL
+                : new JVString(v);
+    }
+
+    // char ?
+
+    static JVInt of(int v) { return new JVInt(v); }
+
+    static JVLong of(long v) { return new JVLong(v); }
+
+    static JVDouble of(double v) { return new JVDouble(v); }
+
+    static JVFloat of(float v) { return new JVFloat(v); }
+
+    static JsonValue of(@Nullable BigDecimal v) {
+        return v == null ? NULL
+                : new JVBigDecimal(v);
+    }
+
+    static JsonValue of(@Nullable BigInteger v) {
+        return v == null ? NULL
+                : new JVBigInteger(v);
+    }
+
+    static JsonValue of(@Nullable Map<String,JsonValue> v) {
+        return v == null ? NULL
+                : new JVMap(v);
+    }
+
+    static JsonValue of(@Nullable List<JsonValue> list) {
+        return list == null ? NULL
+            : new JVArray(list);
+    }
+
+    static JsonValue of(JsonValue[] values) {
+        return values == null ? NULL
+            : new JVArray(Arrays.asList(values));
+    }
+
+
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    final class JVBool implements JsonValue {
+        public final boolean bool;
+        @Override public Boolean value() { return bool ? Boolean.TRUE : Boolean.FALSE; }
+        @Override public @NonNull String toJson() { return bool ? "true" : "false"; }
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof JVBool)) return false;
+            JVBool jv = (JVBool) o;
+            return bool == jv.bool;
+        }
+        @Override public int hashCode() { return bool ? 1 : 0; }
+        @Override public String toString() { return toJson(); }
+    }
+
+    @Getter(onMethod_=@Override)  @Accessors(fluent = true)
+    final class JVString extends JVObj<String> {
+        public JVString(@NonNull String value) { super(value); }
+        @Override public @NonNull String toJson() { return '"' + Encoding.jsonEncode(value()) + '"'; }
+        @Override public boolean isEmpty() { return value.isEmpty(); }
+    }
+
+    @Getter(onMethod_=@Override)  @Accessors(fluent = true)
+    final class JVBigDecimal extends JVObj<BigDecimal> {
+        public JVBigDecimal(@NonNull BigDecimal value) { super(value); }
+    }
+
+    @Getter(onMethod_=@Override)  @Accessors(fluent = true)
+    final class JVBigInteger extends JVObj<BigInteger> {
+        public JVBigInteger(@NonNull BigInteger value) { super(value); }
+    }
+
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    final class JVInt implements JsonValue {
+        public final int value;
+        @Override public Integer value() { return value; }
+        @Override public @NonNull String toJson() { return Integer.toString(value); }
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof JsonValue)) return false;
+            JsonValue jv = (JsonValue) o;
+            return Objects.equals(value(), jv.value());
+        }
+        @Override public int hashCode() { return value; }
+        @Override public String toString() { return toJson(); }
+    }
+
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    final class JVLong implements JsonValue {
+        public final long value;
+        @Override public Long value() { return value; }
+        @Override public @NonNull String toJson() { return Long.toString(value); }
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof JsonValue)) return false;
+            JsonValue jv = (JsonValue) o;
+            return Objects.equals(value(), jv.value());
+        }
+        @Override public int hashCode() { return Long.hashCode(value); }
+        @Override public String toString() { return toJson(); }
+    }
+
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    final class JVDouble implements JsonValue {
+        public final double value;
+        @Override public Double value() { return value; }
+        @Override public @NonNull String toJson() { return Double.toString(value); }
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof JsonValue)) return false;
+            JsonValue jv = (JsonValue) o;
+            return Objects.equals(value(), jv.value());
+        }
+        @Override public int hashCode() { return Double.hashCode(value); }
+        @Override public String toString() { return toJson(); }
+    }
+
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    final class JVFloat implements JsonValue {
+        public final float value;
+        @Override public Float value() { return value; }
+        @Override public @NonNull String toJson() { return Float.toString(value); }
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof JsonValue)) return false;
+            JsonValue jv = (JsonValue) o;
+            return Objects.equals(value(), jv.value());
+        }
+        @Override public int hashCode() { return Float.hashCode(value); }
+        @Override public String toString() { return toJson(); }
+    }
+
+    final class JVMap extends JVObj<Map<String,JsonValue>> {
+        public final ArrayList<String> mapOrder = new ArrayList<>();
+
+        private JVMap(Map<String, JsonValue> value) { super(value); }// not thread safe
+
+        public static JVMap create() { return new JVMap(new HashMap<>()); }
+
+        @Override public int size() { return value.size(); }
+
+        @Override
+        public @NonNull String toJson() {
+            StringBuilder sbo = beginJson();
+            if (!mapOrder.isEmpty()) {
+                for (String key : mapOrder) {
+                    addField(sbo, key, value.get(key));
+                }
+            } else {
+                for (Map.Entry<String, JsonValue> entry : value.entrySet()) {
+                    addField(sbo, entry.getKey(), entry.getValue());
+                }
+            }
+            return endJson(sbo).toString();
+        }
+
+        @Override public Set<String> keySet() { return value.keySet(); }
+
+        @Override public Set<Map.Entry<String, JsonValue>> entrySet() { return value.entrySet(); }
+
+        public void put(String key, JsonValue v) {
+            value.put(key, v);
+        }
+
+        @Override
+        public void remove(String key) {
+            value.remove(key);
         }
     }
 
-    private String valueString(String s) {
-        return QUOTE + Encoding.jsonEncode(s) + QUOTE;
-    }
+    final class JVArray extends JVObj<List<JsonValue>> {
+        private JVArray(List<JsonValue> value) { super(value); }// not thread safe
 
-    private String valueString(boolean b) {
-        return Boolean.toString(b).toLowerCase();
-    }
+        @Override public int size() { return value.size(); }
 
-    private String valueString(Map<String, JsonValue> map) {
-        StringBuilder sbo = beginJson();
-        if (!mapOrder.isEmpty()) {
-            for (String key : mapOrder) {
-                addField(sbo, key, map.get(key));
+        public static JVArray create () { return new JVArray(new ArrayList<>()); }
+
+        @Override
+        public @NonNull String toJson() {
+            StringBuilder sba = beginArray(value.size());
+            for (JsonValue v : value) {
+                sba.append(v.toJson());
+                sba.append(',');
+            }
+            return endArray(sba).toString();
+        }
+
+        public void add (@Nullable JsonValue item) {
+            if (item != null) {
+                value.add(item);
             }
         }
-        else {
-            for (String key : map.keySet()) {
-                addField(sbo, key, map.get(key));
-            }
-        }
-        return endJson(sbo).toString();
     }
-
-    private String valueString(List<JsonValue> list) {
-        StringBuilder sba = beginArray();
-        for (JsonValue v : list) {
-            sba.append(v.toJson());
-            sba.append(COMMA);
-        }
-        return endArray(sba).toString();
-    }
-
+}
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+@Getter(onMethod_=@Override)  @Accessors(fluent = true)
+class JVObj<V> implements JsonValue {
+    public final @NonNull V value;
+    @Override public @NonNull String toJson() { return value().toString(); }
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        JsonValue jsonValue = (JsonValue) o;
-
-        if (type != jsonValue.type) return false;
-        if (!Objects.equals(map, jsonValue.map)) return false;
-        if (!Objects.equals(array, jsonValue.array)) return false;
-        if (!Objects.equals(string, jsonValue.string)) return false;
-        if (!Objects.equals(bool, jsonValue.bool)) return false;
-        if (!Objects.equals(i, jsonValue.i)) return false;
-        if (!Objects.equals(l, jsonValue.l)) return false;
-        if (!Objects.equals(d, jsonValue.d)) return false;
-        if (!Objects.equals(f, jsonValue.f)) return false;
-        if (!Objects.equals(bd, jsonValue.bd)) return false;
-        return Objects.equals(bi, jsonValue.bi);
+        if (!(o instanceof JsonValue)) return false;
+        JsonValue jv = (JsonValue) o;
+        return Objects.equals(value(), jv.value());
     }
-
-    @Override
-    public int hashCode() {
-        int result = map != null ? map.hashCode() : 0;
-        result = 31 * result + (array != null ? array.hashCode() : 0);
-        result = 31 * result + (string != null ? string.hashCode() : 0);
-        result = 31 * result + (bool != null ? bool.hashCode() : 0);
-        result = 31 * result + (i != null ? i.hashCode() : 0);
-        result = 31 * result + (l != null ? l.hashCode() : 0);
-        result = 31 * result + (d != null ? d.hashCode() : 0);
-        result = 31 * result + (f != null ? f.hashCode() : 0);
-        result = 31 * result + (bd != null ? bd.hashCode() : 0);
-        result = 31 * result + (bi != null ? bi.hashCode() : 0);
-        result = 31 * result + (type != null ? type.hashCode() : 0);
-        return result;
-    }
+    @Override public int hashCode() { return value().hashCode(); }
+    @Override public String toString() { return toJson(); }
 }

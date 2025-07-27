@@ -29,7 +29,6 @@ import static io.nats.client.support.ApiConstants.DESCRIPTION;
 import static io.nats.client.support.DateTimeUtils.DEFAULT_TIME;
 import static io.nats.client.support.DateTimeUtils.ZONE_ID_GMT;
 import static io.nats.client.support.JsonUtils.*;
-import static io.nats.client.support.JsonValueUtils.mapBuilder;
 import static io.nats.client.utils.ResourceUtils.dataAsString;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -180,10 +179,10 @@ public final class JsonUtilsTests {
         assertEquals(0, sb.length());
 
         //noinspection UnnecessaryBoxing
-        addField(sb, "iminusone", new Integer(-1));
+        addField(sb, "iminusone", Integer.valueOf(-1));
         assertEquals(0, sb.length());
 
-        addField(sb, "lminusone", new Long(-1));
+        addField(sb, "lminusone", Long.valueOf(-1));
         assertEquals(0, sb.length());
 
         addStrings(sb, "foo", new String[]{"bbb"});
@@ -211,14 +210,14 @@ public final class JsonUtilsTests {
         assertEquals(87, sb.length());
 
         //noinspection UnnecessaryBoxing
-        addFieldWhenGtZero(sb, "intnotgt0", new Integer(0));
+        addFieldWhenGtZero(sb, "intnotgt0", Integer.valueOf(0));
         assertEquals(87, sb.length());
 
         addFieldWhenGtZero(sb, "longnotgt0", 0L);
         assertEquals(87, sb.length());
 
         //noinspection UnnecessaryBoxing
-        addFieldWhenGtZero(sb, "intgt0", new Integer(1));
+        addFieldWhenGtZero(sb, "intgt0", Integer.valueOf(1));
         assertEquals(98, sb.length());
 
         addFieldWhenGtZero(sb, "longgt0", 1L);
@@ -433,7 +432,7 @@ public final class JsonUtilsTests {
         bytes = readBytes("\"foo\":\"bytes\"", MISSING_RE);
         assertNull(bytes);
 
-        Map<String, Long> map = getMapOfLongs(mapBuilder().put("a", Long.MAX_VALUE).put("b", Long.MAX_VALUE - 1).toJson());
+        Map<String, Long> map = getMapOfLongs(new JsonValueUtils.MapBuilder().put("a", Long.MAX_VALUE).put("b", Long.MAX_VALUE - 1).toJson());
         assertEquals(2, map.size());
         assertEquals(Long.MAX_VALUE, map.get("a"));
         assertEquals(Long.MAX_VALUE - 1, map.get("b"));

@@ -16,6 +16,7 @@ package io.nats.client.impl;
 import io.nats.client.JetStreamApiException;
 import io.nats.client.Message;
 import io.nats.client.support.JsonValue;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -24,7 +25,7 @@ import static io.nats.client.support.JsonValueUtils.readArray;
 abstract class AbstractListReader {
 
     private final String objectName;
-    private final String filterFieldName;
+    private final @Nullable String filterFieldName;
     protected ListRequestEngine engine;
 
     void process(Message msg) throws JetStreamApiException {
@@ -38,7 +39,7 @@ abstract class AbstractListReader {
         this(objectName, null);
     }
 
-    AbstractListReader(String objectName, String filterFieldName) {
+    AbstractListReader(String objectName, @Nullable String filterFieldName) {
         this.objectName = objectName;
         this.filterFieldName = filterFieldName;
         engine = new ListRequestEngine();

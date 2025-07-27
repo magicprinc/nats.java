@@ -18,6 +18,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static io.nats.client.support.JsonValueUtils.getLong;
 
@@ -27,9 +28,10 @@ public class Subject implements Comparable<Subject> {
 
     static List<Subject> listOf(JsonValue vSubjects) {
         List<Subject> list = new ArrayList<>();
-        if (vSubjects != null && vSubjects.map != null) {
-            for (String subject : vSubjects.map.keySet()) {
-                Long count = getLong(vSubjects.map.get(subject));
+        if (vSubjects instanceof JsonValue.JVMap) {
+            for (Map.Entry<String,JsonValue> e : vSubjects.entrySet()) {
+                String subject  = e.getKey();
+                Long count = getLong(e.getValue());
                 if (count != null) {
                     list.add(new Subject(subject, count));
                 }
@@ -47,8 +49,7 @@ public class Subject implements Comparable<Subject> {
      * Get the subject name
      * @return the subject
      */
-    @NonNull
-    public String getName() {
+    public @NonNull String getName() {
         return name;
     }
 

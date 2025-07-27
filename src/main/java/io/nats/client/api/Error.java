@@ -18,8 +18,11 @@ import io.nats.client.support.JsonValue;
 import io.nats.client.support.JsonValueUtils;
 import io.nats.client.support.Status;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-import static io.nats.client.support.ApiConstants.*;
+import static io.nats.client.support.ApiConstants.CODE;
+import static io.nats.client.support.ApiConstants.DESCRIPTION;
+import static io.nats.client.support.ApiConstants.ERR_CODE;
 
 /**
  * Error returned from an api request.
@@ -30,7 +33,7 @@ public class Error implements JsonSerializable {
 
     private final JsonValue jv;
 
-    static Error optionalInstance(JsonValue vError) {
+    static @Nullable Error optionalInstance(JsonValue vError) {
         return vError == null ? null : new Error(vError);
     }
 
@@ -43,7 +46,7 @@ public class Error implements JsonSerializable {
     }
 
     Error(int code, int apiErrorCode, String desc) {
-        jv = JsonValueUtils.mapBuilder()
+        jv = new JsonValueUtils.MapBuilder()
             .put(CODE, code)
             .put(ERR_CODE, apiErrorCode)
             .put(DESCRIPTION, desc)
@@ -51,14 +54,12 @@ public class Error implements JsonSerializable {
     }
 
     @Override
-    @NonNull
-    public String toJson() {
+    public @NonNull String toJson() {
         return jv.toJson();
     }
 
     @Override
-    @NonNull
-    public JsonValue toJsonValue() {
+    public @NonNull JsonValue toJsonValue() {
         return jv;
     }
 
@@ -70,8 +71,7 @@ public class Error implements JsonSerializable {
         return JsonValueUtils.readInteger(jv, ERR_CODE, NOT_SET);
     }
 
-    @NonNull
-    public String getDescription() {
+    public @NonNull String getDescription() {
         return JsonValueUtils.readString(jv, DESCRIPTION, "Unknown JetStream Error");
     }
 
@@ -91,8 +91,7 @@ public class Error implements JsonSerializable {
         return getDescription() + " [" + apiErrorCode + "]";
     }
 
-    @NonNull
-    public static Error convert(Status status) {
+    public static @NonNull Error convert(Status status) {
         switch (status.getCode()) {
             case 404:
                 return JsNoMessageFoundErr;
@@ -105,12 +104,10 @@ public class Error implements JsonSerializable {
     /**
      * Error representing 400 / 10003 / "bad request"
      */
-    @NonNull
-    public static final Error JsBadRequestErr = new Error(400, 10003, "bad request");
+    public static final @NonNull Error JsBadRequestErr = new Error(400, 10003, "bad request");
 
     /**
      * Error representing 404 / 10037 / "no message found"
      */
-    @NonNull
-    public static final Error JsNoMessageFoundErr = new Error(404, 10037, "no message found");
+    public static final @NonNull Error JsNoMessageFoundErr = new Error(404, 10037, "no message found");
 }

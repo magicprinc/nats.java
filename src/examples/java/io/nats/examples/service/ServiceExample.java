@@ -13,14 +13,28 @@
 
 package io.nats.examples.service;
 
-import io.nats.client.*;
+import io.nats.client.Connection;
+import io.nats.client.ErrorListener;
+import io.nats.client.Message;
+import io.nats.client.Nats;
+import io.nats.client.Options;
 import io.nats.client.support.JsonSerializable;
 import io.nats.client.support.JsonValue;
 import io.nats.client.support.JsonValueUtils;
-import io.nats.service.*;
+import io.nats.service.Discovery;
+import io.nats.service.Endpoint;
+import io.nats.service.Group;
+import io.nats.service.InfoResponse;
+import io.nats.service.PingResponse;
+import io.nats.service.Service;
+import io.nats.service.ServiceBuilder;
+import io.nats.service.ServiceEndpoint;
+import io.nats.service.ServiceMessage;
+import io.nats.service.StatsResponse;
 import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -116,20 +130,20 @@ public class ServiceExample {
             for (int x = 1; x <= 9; x++) { // run ping a few times to see it hit different services
                 request = randomText();
                 String subject = "echo";
-                CompletableFuture<Message> reply = nc.request(subject, request.getBytes());
-                String response = new String(reply.get().getData());
+                CompletableFuture<Message> reply = nc.request(subject, request.getBytes(StandardCharsets.UTF_8));
+                String response = new String(reply.get().getData(), StandardCharsets.UTF_8);
                 System.out.println(x + ". Called " + subject + " with [" + request + "] Received " + response);
             }
 
             // sort subjects are formed this way because the endpoints have groups
             String subject = "sort.ascending";
-            CompletableFuture<Message> reply = nc.request(subject, request.getBytes());
-            String response = new String(reply.get().getData());
+            CompletableFuture<Message> reply = nc.request(subject, request.getBytes(StandardCharsets.UTF_8));
+            String response = new String(reply.get().getData(), StandardCharsets.UTF_8);
             System.out.println("1. Called " + subject + " with [" + request + "] Received " + response);
 
             subject = "sort.descending";
-            reply = nc.request(subject, request.getBytes());
-            response = new String(reply.get().getData());
+            reply = nc.request(subject, request.getBytes(StandardCharsets.UTF_8));
+            response = new String(reply.get().getData(), StandardCharsets.UTF_8);
             System.out.println("1. Called " + subject + " with [" + request + "] Received " + response);
 
             // ----------------------------------------------------------------------------------------------------
@@ -189,8 +203,8 @@ public class ServiceExample {
     }
 
     private static JsonValue replyBody(String label, byte[] data, String handlerId) {
-        return JsonValueUtils.mapBuilder()
-            .put(label, new String(data))
+        return new JsonValueUtils.MapBuilder()
+            .put(label, new String(data, StandardCharsets.UTF_8))
             .put("hid", handlerId)
             .toJsonValue();
     }
@@ -234,18 +248,16 @@ public class ServiceExample {
         }
 
         @Override
-        @NonNull
-        public String toJson() {
+        public @NonNull String toJson() {
             return toJsonValue().toJson();
         }
 
         @Override
-        @NonNull
-        public JsonValue toJsonValue() {
+        public @NonNull JsonValue toJsonValue() {
             Map<String, JsonValue> map = new HashMap<>();
-            map.put("sdata", new JsonValue(sData));
-            map.put("idata", new JsonValue(iData));
-            return new JsonValue(map);
+            map.put("sdata", JsonValue.of(sData));
+            map.put("idata", JsonValue.of(iData));
+            return JsonValue.of(map);
         }
 
         @Override

@@ -13,6 +13,8 @@
 
 package io.nats.client.support;
 
+import org.jspecify.annotations.Nullable;
+
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
@@ -364,7 +366,7 @@ public abstract class Validator {
         return Duration.ofMillis(millis);
     }
 
-    public static Duration validateDurationNotRequiredGtOrEqSeconds(long minSeconds, Duration d, Duration ifNull, String label) {
+    public static Duration validateDurationNotRequiredGtOrEqSeconds(long minSeconds, Duration d, @Nullable Duration ifNull, String label) {
         return d == null ? ifNull : validateDurationGtOrEqSeconds(minSeconds, d.toMillis(), label);
     }
 

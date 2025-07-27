@@ -23,15 +23,61 @@ import java.math.BigInteger;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 import static io.nats.client.support.Encoding.jsonEncode;
-import static io.nats.client.support.JsonParser.*;
+import static io.nats.client.support.JsonParser.Option;
 import static io.nats.client.support.JsonParser.Option.KEEP_NULLS;
-import static io.nats.client.support.JsonValueUtils.*;
+import static io.nats.client.support.JsonParser.parse;
+import static io.nats.client.support.JsonParser.parseUnchecked;
+import static io.nats.client.support.JsonValueUtils.ArrayBuilder;
+import static io.nats.client.support.JsonValueUtils.MapBuilder;
+import static io.nats.client.support.JsonValueUtils.getInteger;
+import static io.nats.client.support.JsonValueUtils.getLong;
+import static io.nats.client.support.JsonValueUtils.instance;
+import static io.nats.client.support.JsonValueUtils.read;
+import static io.nats.client.support.JsonValueUtils.readBoolean;
+import static io.nats.client.support.JsonValueUtils.readDate;
+import static io.nats.client.support.JsonValueUtils.readInteger;
+import static io.nats.client.support.JsonValueUtils.readLong;
+import static io.nats.client.support.JsonValueUtils.readNanos;
+import static io.nats.client.support.JsonValueUtils.readNanosList;
+import static io.nats.client.support.JsonValueUtils.readObject;
+import static io.nats.client.support.JsonValueUtils.readOptionalStringList;
+import static io.nats.client.support.JsonValueUtils.readString;
+import static io.nats.client.support.JsonValueUtils.readStringList;
+import static io.nats.client.support.JsonValueUtils.readStringListIgnoreEmpty;
+import static io.nats.client.support.JsonValueUtils.readStringStringMap;
+import static io.nats.client.support.JsonValueUtils.readValue;
 import static io.nats.client.utils.ResourceUtils.dataAsLines;
-import static io.nats.client.utils.TestBase.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static io.nats.client.utils.TestBase.GT_NOT_SEGMENT;
+import static io.nats.client.utils.TestBase.HAS_127;
+import static io.nats.client.utils.TestBase.HAS_BACK_SLASH;
+import static io.nats.client.utils.TestBase.HAS_DASH;
+import static io.nats.client.utils.TestBase.HAS_DOLLAR;
+import static io.nats.client.utils.TestBase.HAS_DOT;
+import static io.nats.client.utils.TestBase.HAS_EQUALS;
+import static io.nats.client.utils.TestBase.HAS_FWD_SLASH;
+import static io.nats.client.utils.TestBase.HAS_LOW;
+import static io.nats.client.utils.TestBase.HAS_PRINTABLE;
+import static io.nats.client.utils.TestBase.HAS_SPACE;
+import static io.nats.client.utils.TestBase.HAS_TIC;
+import static io.nats.client.utils.TestBase.HAS_UNDER;
+import static io.nats.client.utils.TestBase.PLAIN;
+import static io.nats.client.utils.TestBase.STAR_NOT_SEGMENT;
+import static io.nats.client.utils.TestBase.key;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class JsonParsingTests {
 
@@ -79,7 +125,7 @@ public final class JsonParsingTests {
 
         for (int i = 0; i < list.size(); i++) {
             JsonValue v = list.get(i);
-            assertEquals(decodeds.get(i), v.string);
+            assertEquals(decodeds.get(i), v.string());
             assertEquals(v.toJson(), "\"" + encodeds.get(i) + "\"");
         }
     }
@@ -90,7 +136,7 @@ public final class JsonParsingTests {
         String enc = jsonEncode(decoded);
         encodeds.add(enc);
         decodeds.add(decoded);
-        JsonValue jv = new JsonValue(decoded);
+        JsonValue jv = JsonValue.of(decoded);
         map.put(name, jv);
         list.add(jv);
     }
@@ -99,67 +145,67 @@ public final class JsonParsingTests {
     @Test
     public void testJsonValuePrimitives() throws JsonParseException {
         Map<String, JsonValue> oMap = new HashMap<>();
-        oMap.put("trueKey1", new JsonValue(true));
-        oMap.put("trueKey2", new JsonValue(Boolean.TRUE));
-        oMap.put("falseKey1", new JsonValue(false));
-        oMap.put("falseKey2", new JsonValue(Boolean.FALSE));
-        oMap.put("stringKey", new JsonValue("hello world!"));
-        oMap.put("escapeStringKey", new JsonValue("h\be\tllo w\u1234orld!"));
+        oMap.put("trueKey1", JsonValue.of(true));
+        oMap.put("trueKey2", JsonValue.of(Boolean.TRUE));
+        oMap.put("falseKey1", JsonValue.of(false));
+        oMap.put("falseKey2", JsonValue.of(Boolean.FALSE));
+        oMap.put("stringKey", JsonValue.of("hello world!"));
+        oMap.put("escapeStringKey", JsonValue.of("h\be\tllo w\u1234orld!"));
         oMap.put("nullKey", JsonValue.NULL);
-        oMap.put("intKey1", new JsonValue(Integer.MAX_VALUE));
-        oMap.put("intKey2", new JsonValue(Integer.MIN_VALUE));
-        oMap.put("longKey1", new JsonValue(Long.MAX_VALUE));
-        oMap.put("longKey2", new JsonValue(Long.MIN_VALUE));
-        oMap.put("doubleKey1", new JsonValue(Double.MAX_VALUE));
-        oMap.put("doubleKey2", new JsonValue(Double.MIN_VALUE));
-        oMap.put("floatKey1", new JsonValue(Float.MAX_VALUE));
-        oMap.put("floatKey2", new JsonValue(Float.MIN_VALUE));
-        oMap.put("bigDecimalKey1", new JsonValue(new BigDecimal("9223372036854775807.123")));
-        oMap.put("bigDecimalKey2", new JsonValue(new BigDecimal("-9223372036854775808.123")));
-        oMap.put("bigIntegerKey1", new JsonValue(new BigInteger("9223372036854775807")));
-        oMap.put("bigIntegerKey2", new JsonValue(new BigInteger("-9223372036854775808")));
+        oMap.put("intKey1", JsonValue.of(Integer.MAX_VALUE));
+        oMap.put("intKey2", JsonValue.of(Integer.MIN_VALUE));
+        oMap.put("longKey1", JsonValue.of(Long.MAX_VALUE));
+        oMap.put("longKey2", JsonValue.of(Long.MIN_VALUE));
+        oMap.put("doubleKey1", JsonValue.of(Double.MAX_VALUE));
+        oMap.put("doubleKey2", JsonValue.of(Double.MIN_VALUE));
+        oMap.put("floatKey1", JsonValue.of(Float.MAX_VALUE));
+        oMap.put("floatKey2", JsonValue.of(Float.MIN_VALUE));
+        oMap.put("bigDecimalKey1", JsonValue.of(new BigDecimal("9223372036854775807.123")));
+        oMap.put("bigDecimalKey2", JsonValue.of(new BigDecimal("-9223372036854775808.123")));
+        oMap.put("bigIntegerKey1", JsonValue.of(new BigInteger("9223372036854775807")));
+        oMap.put("bigIntegerKey2", JsonValue.of(new BigInteger("-9223372036854775808")));
 
         // some coverage here
-        JsonValue vMap = new JsonValue(oMap);
+        JsonValue vMap = JsonValue.of(oMap);
         assertEquals(vMap.toJson(), vMap.toString());
 
         validateMapTypes(oMap, oMap, true);
 
         // don't keep nulls
-        JsonValue parsed = parse(new JsonValue(oMap).toJson());
-        assertNotNull(parsed.map);
-        assertEquals(oMap.size() - 1, parsed.map.size());
-        validateMapTypes(parsed.map, oMap, false);
+        JsonValue parsed = parse(JsonValue.of(oMap).toJson());
+        assertNotNull(parsed.map());
+        assertEquals(oMap.size() - 1, parsed.size());
+        validateMapTypes(parsed.map(), oMap, false);
 
         // keep nulls
-        parsed = parse(new JsonValue(oMap).toJson(), KEEP_NULLS);
-        assertNotNull(parsed.map);
-        assertEquals(oMap.size(), parsed.map.size());
-        validateMapTypes(parsed.map, oMap, true);
+        parsed = parse(JsonValue.of(oMap).toJson(), KEEP_NULLS);
+        assertNotNull(parsed.map());
+        assertEquals(oMap.size(), parsed.size());
+        validateMapTypes(parsed.map(), oMap, true);
     }
 
     private static void validateMapTypes(Map<String, JsonValue> map, Map<String, JsonValue> oMap, boolean original) {
-        assertEquals(JsonValue.Type.BOOL, map.get("trueKey1").type);
-        assertEquals(JsonValue.Type.BOOL, map.get("trueKey2").type);
-        assertEquals(JsonValue.Type.BOOL, map.get("falseKey1").type);
-        assertEquals(JsonValue.Type.BOOL, map.get("falseKey2").type);
-        assertEquals(JsonValue.Type.STRING, map.get("stringKey").type);
-        assertEquals(JsonValue.Type.STRING, map.get("escapeStringKey").type);
-        assertEquals(JsonValue.Type.INTEGER, map.get("intKey1").type);
-        assertEquals(JsonValue.Type.INTEGER, map.get("intKey2").type);
-        assertEquals(JsonValue.Type.LONG, map.get("longKey1").type);
-        assertEquals(JsonValue.Type.LONG, map.get("longKey2").type);
+        assertInstanceOf(JsonValue.JVBool.class, map.get("trueKey1"));
+        assertInstanceOf(JsonValue.JVBool.class, map.get("trueKey2"));
+        assertInstanceOf(JsonValue.JVBool.class, map.get("falseKey1"));
+        assertInstanceOf(JsonValue.JVBool.class, map.get("falseKey2"));
+        assertInstanceOf(JsonValue.JVString.class, map.get("stringKey"));
+        assertInstanceOf(JsonValue.JVString.class, map.get("escapeStringKey"));
+        assertInstanceOf(JsonValue.JVInt.class, map.get("intKey1"));
+        assertInstanceOf(JsonValue.JVInt.class, map.get("intKey2"));
+        assertInstanceOf(JsonValue.JVLong.class, map.get("longKey1"));
+        assertInstanceOf(JsonValue.JVLong.class, map.get("longKey2"));
 
-        assertNotNull(map.get("trueKey1").bool);
-        assertNotNull(map.get("trueKey2").bool);
-        assertNotNull(map.get("falseKey1").bool);
-        assertNotNull(map.get("falseKey2").bool);
-        assertNotNull(map.get("stringKey").string);
-        assertNotNull(map.get("escapeStringKey").string);
-        assertNotNull(map.get("intKey1").i);
-        assertNotNull(map.get("intKey2").i);
-        assertNotNull(map.get("longKey1").l);
-        assertNotNull(map.get("longKey2").l);
+        assertNotNull(map.get("trueKey1").bool());
+        assertNotNull(map.get("trueKey2").bool());
+        assertNotNull(map.get("falseKey1").bool());
+        assertNotNull(map.get("falseKey2").bool());
+        assertNotNull(map.get("stringKey").string());
+        assertNotNull(map.get("escapeStringKey").string());
+        assertNotNull(map.get("intKey1").i());
+        assertNotNull(map.get("intKey2").i());
+        assertNotNull(map.get("longKey1").l());
+        assertNotNull(map.get("longKey2").l());
 
         assertEquals(oMap.get("trueKey1"), map.get("trueKey1"));
         assertEquals(oMap.get("trueKey2"), map.get("trueKey2"));
@@ -173,88 +219,87 @@ public final class JsonParsingTests {
         assertEquals(oMap.get("longKey2"), map.get("longKey2"));
 
         if (original) {
-            assertNotNull(oMap.get("intKey1").i);
-            assertNotNull(oMap.get("intKey2").i);
-            assertNotNull(oMap.get("longKey1").l);
-            assertNotNull(oMap.get("longKey2").l);
-            assertNotNull(oMap.get("doubleKey1").d);
-            assertNotNull(oMap.get("doubleKey2").d);
-            assertNotNull(oMap.get("floatKey1").f);
-            assertNotNull(oMap.get("floatKey2").f);
-            assertNotNull(oMap.get("bigDecimalKey1").bd);
-            assertNotNull(oMap.get("bigDecimalKey2").bd);
-            assertNotNull(oMap.get("bigIntegerKey1").bi);
-            assertNotNull(oMap.get("bigIntegerKey2").bi);
+            assertNotNull(oMap.get("intKey1").i());
+            assertNotNull(oMap.get("intKey2").i());
+            assertNotNull(oMap.get("longKey1").l());
+            assertNotNull(oMap.get("longKey2").l());
+            assertNotNull(oMap.get("doubleKey1").d());
+            assertNotNull(oMap.get("doubleKey2").d());
+            assertNotNull(oMap.get("floatKey1").f());
+            assertNotNull(oMap.get("floatKey2").f());
+            assertNotNull(oMap.get("bigDecimalKey1").bd());
+            assertNotNull(oMap.get("bigDecimalKey2").bd());
+            assertNotNull(oMap.get("bigIntegerKey1").bi());
+            assertNotNull(oMap.get("bigIntegerKey2").bi());
 
-            assertEquals(JsonValue.Type.NULL, map.get("nullKey").type);
-            assertNull(map.get("nullKey").object);
+            assertSame(JsonValue.NULL, map.get("nullKey"));
+            assertNull(map.get("nullKey").value());
             assertEquals(oMap.get("nullKey"), map.get("nullKey"));
         }
         else {
-            assertNotNull(oMap.get("intKey1").number);
-            assertNotNull(oMap.get("intKey2").number);
-            assertNotNull(oMap.get("longKey1").number);
-            assertNotNull(oMap.get("longKey2").number);
-            assertNotNull(oMap.get("doubleKey1").number);
-            assertNotNull(oMap.get("doubleKey2").number);
-            assertNotNull(oMap.get("floatKey1").number);
-            assertNotNull(oMap.get("floatKey2").number);
-            assertNotNull(oMap.get("bigDecimalKey1").number);
-            assertNotNull(oMap.get("bigDecimalKey2").number);
-            assertNotNull(oMap.get("bigIntegerKey1").number);
-            assertNotNull(oMap.get("bigIntegerKey2").number);
+            assertNotNull(oMap.get("intKey1").value());
+            assertNotNull(oMap.get("intKey2").value());
+            assertNotNull(oMap.get("longKey1").value());
+            assertNotNull(oMap.get("longKey2").value());
+            assertNotNull(oMap.get("doubleKey1").value());
+            assertNotNull(oMap.get("doubleKey2").value());
+            assertNotNull(oMap.get("floatKey1").value());
+            assertNotNull(oMap.get("floatKey2").value());
+            assertNotNull(oMap.get("bigDecimalKey1").value());
+            assertNotNull(oMap.get("bigDecimalKey2").value());
+            assertNotNull(oMap.get("bigIntegerKey1").value());
+            assertNotNull(oMap.get("bigIntegerKey2").value());
         }
     }
 
     @Test
     public void testArray() throws JsonParseException {
         List<JsonValue> list = new ArrayList<>();
-        list.add(new JsonValue("string"));
-        list.add(new JsonValue(true));
+        list.add(JsonValue.of("string"));
+        list.add(JsonValue.of(true));
         list.add(JsonValue.NULL);
         list.add(JsonValue.EMPTY_MAP);
         list.add(JsonValue.EMPTY_ARRAY);
 
-        JsonValue root = parse(new JsonValue(list).toJson());
-        assertNotNull(root.array);
-        assertEquals(list.size(), root.array.size());
-        List<JsonValue> array = root.array;
+        JsonValue root = parse(JsonValue.of(list).toJson());
+        assertNotNull(root.array());
+        assertEquals(list.size(), root.size());
+        List<JsonValue> array = root.array();
         for (int i = 0; i < array.size(); i++) {
             JsonValue v = array.get(i);
-            JsonValue p = root.array.get(i);
-            assertEquals(v.object, p.object);
+            JsonValue p = root.array().get(i);
+            assertEquals(v.value(), (Object) p.value());
             assertTrue(list.contains(v));
         }
 
 
         list.clear();
-        list.add(new JsonValue(1));
-        list.add(new JsonValue(Long.MAX_VALUE));
-        list.add(new JsonValue(Double.MAX_VALUE));
-        list.add(new JsonValue(Float.MAX_VALUE));
-        list.add(new JsonValue(new BigDecimal(Double.toString(Double.MAX_VALUE))));
-        list.add(new JsonValue(new BigInteger(Long.toString(Long.MAX_VALUE))));
+        list.add(JsonValue.of(1));
+        list.add(JsonValue.of(Long.MAX_VALUE));
+        list.add(JsonValue.of(Double.MAX_VALUE));
+        list.add(JsonValue.of(Float.MAX_VALUE));
+        list.add(JsonValue.of(new BigDecimal(Double.toString(Double.MAX_VALUE))));
+        list.add(JsonValue.of(new BigInteger(Long.toString(Long.MAX_VALUE))));
 
-        root = parse(new JsonValue(list).toJson());
-        assertNotNull(root.array);
-        assertEquals(list.size(), root.array.size());
-        array = root.array;
+        root = parse(JsonValue.of(list).toJson());
+        assertNotNull(root.array());
+        assertEquals(list.size(), root.size());
+        array = root.array();
         for (int i = 0; i < array.size(); i++) {
             JsonValue v = array.get(i);
-            JsonValue p = root.array.get(i);
-            assertEquals(v.object, p.object);
-            assertEquals(v.number, p.number);
+            JsonValue p = root.array().get(i);
+            assertEquals(v.value(), (Object) p.value());
         }
 
         Map<String, JsonValue> rootMap = new HashMap<>();
-        rootMap.put("list", new JsonValue(list));
-        rootMap.put("array", new JsonValue(list.toArray(new JsonValue[0])));
-        root = new JsonValue(rootMap);
-        List<JsonValue> mappedList = readValue(root, "list").array;
+        rootMap.put("list", JsonValue.of(list));
+        rootMap.put("array", JsonValue.of(list.toArray(new JsonValue[0])));
+        root = JsonValue.of(rootMap);
+        List<JsonValue> mappedList = readValue(root, "list").array();
 
-        List<JsonValue> mappedList2 = parse(new JsonValue(mappedList).toJson()).array;
-        List<JsonValue> mappedArray = readValue(root, "array").array;
-        List<JsonValue> mappedArray2 = parse(new JsonValue(list.toArray(new JsonValue[0])).toJson()).array;
+        List<JsonValue> mappedList2 = parse(JsonValue.of(mappedList).toJson()).array();
+        List<JsonValue> mappedArray = readValue(root, "array").array();
+        List<JsonValue> mappedArray2 = parse(JsonValue.of(list.toArray(new JsonValue[0])).toJson()).array();
         for (int i = 0; i < list.size(); i++) {
             JsonValue v = list.get(i);
             JsonValue lv = mappedList.get(i);
@@ -269,10 +314,10 @@ public final class JsonParsingTests {
             assertEquals(v, av);
 
             // conversions are not perfect for doubles and floats, but that's a java thing, not a parser thing
-            if (v.type == lv2.type) {
+            if (v.getClass() == lv2.getClass()) {
                 assertEquals(v, lv2);
             }
-            if (v.type == av2.type) {
+            if (v.getClass() == av2.getClass()) {
                 assertEquals(v, av2);
             }
         }
@@ -281,19 +326,19 @@ public final class JsonParsingTests {
     @Test
     public void testListReading() {
         List<JsonValue> jvList = new ArrayList<>();
-        jvList.add(new JsonValue("string1"));
-        jvList.add(new JsonValue("string2"));
-        jvList.add(new JsonValue(""));
-        jvList.add(new JsonValue(true));
-        jvList.add(new JsonValue((String)null));
+        jvList.add(JsonValue.of("string1"));
+        jvList.add(JsonValue.of("string2"));
+        jvList.add(JsonValue.of(""));
+        jvList.add(JsonValue.of(true));
+        jvList.add(JsonValue.of((String)null));
         jvList.add(JsonValue.NULL);
         jvList.add(JsonValue.EMPTY_MAP);
         jvList.add(JsonValue.EMPTY_ARRAY);
-        jvList.add(new JsonValue(Integer.MAX_VALUE));
-        jvList.add(new JsonValue(Long.MAX_VALUE));
+        jvList.add(JsonValue.of(Integer.MAX_VALUE));
+        jvList.add(JsonValue.of(Long.MAX_VALUE));
         Map<String, JsonValue> jvMap = new HashMap<>();
-        jvMap.put("list", new JsonValue(jvList));
-        JsonValue root = new JsonValue(jvMap);
+        jvMap.put("list", JsonValue.of(jvList));
+        JsonValue root = JsonValue.of(jvMap);
 
         List<String> list = readStringList(root, "list");
         assertEquals(3, list.size());
@@ -323,9 +368,9 @@ public final class JsonParsingTests {
         jvList.add(instance(d0));
         jvList.add(instance(d1));
         jvList.add(instance(d2));
-        jvList.add(new JsonValue("not duration nanos"));
+        jvList.add(JsonValue.of("not duration nanos"));
 
-        root = new JsonValue(jvMap);
+        root = JsonValue.of(jvMap);
 
         List<Duration> dlist = readNanosList(root, "list");
         assertEquals(3, dlist.size());
@@ -336,10 +381,10 @@ public final class JsonParsingTests {
 
     @Test
     public void testGetIntLong() {
-        JsonValue i = new JsonValue(Integer.MAX_VALUE);
-        JsonValue li = new JsonValue((long)Integer.MAX_VALUE);
-        JsonValue lmax = new JsonValue(Long.MAX_VALUE);
-        JsonValue lmin = new JsonValue(Long.MIN_VALUE);
+        JsonValue i = JsonValue.of(Integer.MAX_VALUE);
+        JsonValue li = JsonValue.of((long)Integer.MAX_VALUE);
+        JsonValue lmax = JsonValue.of(Long.MAX_VALUE);
+        JsonValue lmin = JsonValue.of(Long.MIN_VALUE);
         assertEquals(Integer.MAX_VALUE, getInteger(i));
         assertEquals(Integer.MAX_VALUE, getInteger(li));
         assertNull(getInteger(lmax));
@@ -367,32 +412,31 @@ public final class JsonParsingTests {
 
     @Test
     public void testConstantsAreReadOnly() {
-        assertThrows(UnsupportedOperationException.class, () -> JsonValue.EMPTY_MAP.map.put("foo", null));
-        assertThrows(UnsupportedOperationException.class, () -> JsonValue.EMPTY_ARRAY.array.add(null));
+        assertThrows(UnsupportedOperationException.class, () -> JsonValue.EMPTY_MAP.put("foo", null));
+        assertThrows(UnsupportedOperationException.class, () -> JsonValue.EMPTY_ARRAY.add(null));
     }
 
     @Test
     public void testNullJsonValue() {
-        assertEquals(JsonValue.Type.NULL, JsonValue.NULL.type);
-        assertNull(JsonValue.NULL.object);
-        assertNull(JsonValue.NULL.map);
-        assertNull(JsonValue.NULL.array);
-        assertNull(JsonValue.NULL.string);
-        assertNull(JsonValue.NULL.bool);
-        assertNull(JsonValue.NULL.number);
-        assertNull(JsonValue.NULL.i);
-        assertNull(JsonValue.NULL.l);
-        assertNull(JsonValue.NULL.d);
-        assertNull(JsonValue.NULL.f);
-        assertNull(JsonValue.NULL.bd);
-        assertNull(JsonValue.NULL.bi);
-        assertEquals(JsonValue.NULL, new JsonValue((String)null));
-        assertEquals(JsonValue.NULL, new JsonValue((Boolean) null));
-        assertEquals(JsonValue.NULL, new JsonValue((Map<String, JsonValue>)null));
-        assertEquals(JsonValue.NULL, new JsonValue((List<JsonValue>)null));
-        assertEquals(JsonValue.NULL, new JsonValue((JsonValue[])null));
-        assertEquals(JsonValue.NULL, new JsonValue((BigDecimal)null));
-        assertEquals(JsonValue.NULL, new JsonValue((BigInteger) null));
+        assertEquals(JsonValue.NULL, JsonValue.NULL);
+        assertNull(JsonValue.NULL.value());
+        assertNull(JsonValue.NULL.map());
+        assertNull(JsonValue.NULL.array());
+        assertNull(JsonValue.NULL.string());
+        assertNull(JsonValue.NULL.bool());
+        assertNull(JsonValue.NULL.i());
+        assertNull(JsonValue.NULL.l());
+        assertNull(JsonValue.NULL.d());
+        assertNull(JsonValue.NULL.f());
+        assertNull(JsonValue.NULL.bd());
+        assertNull(JsonValue.NULL.bi());
+        assertEquals(JsonValue.NULL, JsonValue.of((String)null));
+        assertEquals(JsonValue.NULL, JsonValue.of((Boolean) null));
+        assertEquals(JsonValue.NULL, JsonValue.of((Map<String, JsonValue>)null));
+        assertEquals(JsonValue.NULL, JsonValue.of((List<JsonValue>)null));
+        assertEquals(JsonValue.NULL, JsonValue.of((JsonValue[])null));
+        assertEquals(JsonValue.NULL, JsonValue.of((BigDecimal)null));
+        assertEquals(JsonValue.NULL, JsonValue.of((BigInteger) null));
     }
 
     @Test
@@ -401,15 +445,15 @@ public final class JsonParsingTests {
         Duration dur = Duration.ofNanos(4273);
         Duration dur2 = Duration.ofNanos(7342);
 
-        JsonValue v = new JsonValue(new HashMap<>());
-        v.map.put("bool", new JsonValue(Boolean.TRUE));
-        v.map.put("string", new JsonValue("hello"));
-        v.map.put("int", new JsonValue(Integer.MAX_VALUE));
-        v.map.put("long", new JsonValue(Long.MAX_VALUE));
-        v.map.put("date", new JsonValue(DateTimeUtils.toRfc3339(zdt)));
-        v.map.put("dur", new JsonValue(dur.toNanos()));
-        v.map.put("strings", new JsonValue(new JsonValue[]{new JsonValue("s1"), new JsonValue("s2")}));
-        v.map.put("durs", new JsonValue(new JsonValue[]{new JsonValue(dur.toNanos()), new JsonValue(dur2.toNanos())}));
+        JsonValue v = JsonValue.of(new HashMap<>());
+        v.map().put("bool", JsonValue.of(Boolean.TRUE));
+        v.map().put("string", JsonValue.of("hello"));
+        v.map().put("int", JsonValue.of(Integer.MAX_VALUE));
+        v.map().put("long", JsonValue.of(Long.MAX_VALUE));
+        v.map().put("date", JsonValue.of(DateTimeUtils.toRfc3339(zdt)));
+        v.map().put("dur", JsonValue.of(dur.toNanos()));
+        v.map().put("strings", JsonValue.of(new JsonValue[]{JsonValue.of("s1"), JsonValue.of("s2")}));
+        v.map().put("durs", JsonValue.of(new JsonValue[]{JsonValue.of(dur.toNanos()), JsonValue.of(dur2.toNanos())}));
 
         assertNotNull(readValue(v, "string"));
         assertNull(readValue(v, "na"));
@@ -483,9 +527,9 @@ public final class JsonParsingTests {
         assertEquals(dur2, readNanos(v, "na", dur2));
 
         // these aren't maps
-        JsonValue jvn = new JsonValue(1);
-        JsonValue jvs = new JsonValue("s");
-        JsonValue jvb = new JsonValue(true);
+        JsonValue jvn = JsonValue.of(1);
+        JsonValue jvs = JsonValue.of("s");
+        JsonValue jvb = JsonValue.of(true);
         JsonValue[] notMaps = new JsonValue[] {JsonValue.NULL, JsonValue.EMPTY_ARRAY, jvn, jvs, jvb};
 
         for (JsonValue vv : notMaps) {
@@ -508,13 +552,13 @@ public final class JsonParsingTests {
     @Test
     public void equalsContract() {
         Map<String, JsonValue> map1 = new HashMap<>();
-        map1.put("1", new JsonValue(1));
+        map1.put("1", JsonValue.of(1));
         Map<String, JsonValue> map2 = new HashMap<>();
-        map1.put("2", new JsonValue(2));
+        map1.put("2", JsonValue.of(2));
         List<JsonValue> list3 = new ArrayList<>();
-        list3.add(new JsonValue(3));
+        list3.add(JsonValue.of(3));
         List<JsonValue> list4 = new ArrayList<>();
-        list4.add(new JsonValue(4));
+        list4.add(JsonValue.of(4));
         EqualsVerifier.simple().forClass(JsonValue.class)
             .withPrefabValues(Map.class, map1, map2)
             .withPrefabValues(List.class, list3, list4)
@@ -575,24 +619,25 @@ public final class JsonParsingTests {
         assertEquals(JsonValue.NULL, v);
 
         v = parse("{\"foo\":1,}");
-        assertEquals(1, v.map.size());
-        assertTrue(v.map.containsKey("foo"));
-        assertEquals(1, v.map.get("foo").i);
+        assertEquals(1, v.size());
+        assertTrue(v.map().containsKey("foo"));
+        assertEquals(1, v.map().get("foo").i());
 
         v = parse("INFO{\"foo\":1,}", 4);
-        assertEquals(1, v.map.size());
-        assertTrue(v.map.containsKey("foo"));
-        assertEquals(1, v.map.get("foo").i);
+        assertEquals(1, v.map().size());
+        assertTrue(v.map().containsKey("foo"));
+        assertEquals(1, v.map().get("foo").i());
 
         v = parse("[\"foo\",]"); // handles dangling commas fine
-        assertEquals(1, v.array.size());
-        assertEquals("foo", v.array.get(0).string);
+        assertEquals(1, v.array().size());
+        assertEquals(1, v.size());
+        assertEquals("foo", v.array().get(0).string());
 
         String s = "foo \b \t \n \f \r \" \\ /";
         String j = "\"" + Encoding.jsonEncode(s) + "\"";
         v = parse(j);
-        assertNotNull(v.string);
-        assertEquals(s, v.string);
+        assertNotNull(v.string());
+        assertEquals(s, v.string());
 
         // every constructor
         String json = "{}";
@@ -650,30 +695,45 @@ public final class JsonParsingTests {
 
     @Test
     public void testNumberParsing() throws JsonParseException {
-        assertEquals(JsonValue.Type.INTEGER, parse("1").type);
-        assertEquals(JsonValue.Type.INTEGER, parse(Integer.toString(Integer.MAX_VALUE)).type);
-        assertEquals(JsonValue.Type.INTEGER, parse(Integer.toString(Integer.MIN_VALUE)).type);
-        assertEquals(JsonValue.Type.LONG, parse(Long.toString((long)Integer.MAX_VALUE + 1)).type);
-        assertEquals(JsonValue.Type.LONG, parse(Long.toString((long)Integer.MIN_VALUE - 1)).type);
-        assertEquals(JsonValue.Type.DOUBLE, parse("-0").type);
-        assertEquals(JsonValue.Type.DOUBLE, parse("-0.0").type);
-        assertEquals(JsonValue.Type.DOUBLE, parse("0.1d").type);
-        assertEquals(JsonValue.Type.DOUBLE, parse("0.f").type);
-        assertEquals(JsonValue.Type.DOUBLE, parse("0.1f").type);
-        assertEquals(JsonValue.Type.DOUBLE, parse("-0x1.fffp1").type);
-        assertEquals(JsonValue.Type.DOUBLE, parse("0x1.0P-1074").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("0.2").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("244273.456789012345").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("244273.456789012345").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("0.1234567890123456789").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("-24.42e7345").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("-24.42E7345").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("-.01").type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, parse("00.001").type);
-        assertEquals(JsonValue.Type.BIG_INTEGER, parse("12345678901234567890").type);
+        assertInstanceOf(JsonValue.JVInt.class, parse("1"));
+        assertInstanceOf(JsonValue.JVInt.class, parse(Integer.toString(Integer.MAX_VALUE)));
+        assertInstanceOf(JsonValue.JVInt.class, parse(Integer.toString(Integer.MIN_VALUE)));
+
+        assertInstanceOf(JsonValue.JVLong.class, parse(Long.toString((long)Integer.MAX_VALUE + 1)));
+        assertInstanceOf(JsonValue.JVLong.class, parse(Long.toString((long)Integer.MIN_VALUE - 1)));
+
+        assertInstanceOf(JsonValue.JVDouble.class, parse("-0"));
+        assertInstanceOf(JsonValue.JVDouble.class, parse("-0.0"));
+        assertInstanceOf(JsonValue.JVDouble.class, parse("0.1d"));
+        assertInstanceOf(JsonValue.JVDouble.class, parse("0.f"));
+        assertInstanceOf(JsonValue.JVDouble.class, parse("0.1f"));
+        assertInstanceOf(JsonValue.JVDouble.class, parse("-0x1.fffp1"));
+        assertInstanceOf(JsonValue.JVDouble.class, parse("0x1.0P-1074"));
+
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("0.2"));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("244273.456789012345"));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("244273.456789012345"));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("0.1234567890123456789"));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("-24.42e7345"));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("-24.42E7345"));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("-.01"));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, parse("00.001"));
+
+        assertInstanceOf(BigDecimal.class, parse("0.2").value());
+        assertInstanceOf(BigDecimal.class, parse("244273.456789012345").value());
+        assertInstanceOf(BigDecimal.class, parse("244273.456789012345").value());
+        assertInstanceOf(BigDecimal.class, parse("0.1234567890123456789").value());
+        assertInstanceOf(BigDecimal.class, parse("-24.42e7345").value());
+        assertInstanceOf(BigDecimal.class, parse("-24.42E7345").value());
+        assertInstanceOf(BigDecimal.class, parse("-.01").value());
+        assertInstanceOf(BigDecimal.class, parse("00.001").value());
+
+        assertInstanceOf(JsonValue.JVBigInteger.class, parse("12345678901234567890"));
+        assertInstanceOf(BigInteger.class, parse("12345678901234567890").value());
 
         String str = new BigInteger( Long.toString(Long.MAX_VALUE) ).add( BigInteger.ONE ).toString();
-        assertEquals(JsonValue.Type.BIG_INTEGER, parse(str).type);
+        assertInstanceOf(JsonValue.JVBigInteger.class, parse(str));
+        assertInstanceOf(BigInteger.class, parse(str).value());
 
         validateThrows("-0x123", "Invalid value.");
         JsonParseException e;
@@ -700,30 +760,28 @@ public final class JsonParsingTests {
     @Test
     public void testValueUtilsInstanceDuration() {
         JsonValue v = instance(Duration.ofSeconds(1));
-        assertNotNull(v.l);
-        assertEquals(1000000000L, v.l);
+        assertNotNull(v.l());
+        assertEquals(1000000000L, v.l());
     }
 
     static class TestSerializableMap implements JsonSerializable {
         @Override
-        @NonNull
-        public String toJson() {
-            JsonValue v = new JsonValue(new HashMap<>());
-            v.map.put("a", new JsonValue("A"));
-            v.map.put("b", new JsonValue("B"));
-            v.map.put("c", new JsonValue("C"));
+        public @NonNull String toJson() {
+            JsonValue v = JsonValue.of(new HashMap<>());
+            v.map().put("a", JsonValue.of("A"));
+            v.map().put("b", JsonValue.of("B"));
+            v.map().put("c", JsonValue.of("C"));
             return v.toJson();
         }
     }
 
     static class TestSerializableList implements JsonSerializable {
         @Override
-        @NonNull
-        public String toJson() {
-            JsonValue v = new JsonValue(new ArrayList<>());
-            v.array.add(new JsonValue("X"));
-            v.array.add(new JsonValue("Y"));
-            v.array.add(new JsonValue("Z"));
+        public @NonNull String toJson() {
+            JsonValue v = JsonValue.of(new ArrayList<>());
+            v.array().add(JsonValue.of("X"));
+            v.array().add(JsonValue.of("Y"));
+            v.array().add(JsonValue.of("Z"));
             return v.toJson();
         }
     }
@@ -748,24 +806,27 @@ public final class JsonParsingTests {
         list.add(new TestSerializableList());
         list.add(null);
         JsonValue v = instance(list);
-        assertNotNull(v.array);
-        assertEquals(16, v.array.size());
-        assertEquals(JsonValue.Type.STRING, v.array.get(0).type);
-        assertEquals(JsonValue.Type.NULL, v.array.get(1).type);
-        assertEquals(JsonValue.Type.STRING, v.array.get(2).type);
-        assertEquals(JsonValue.Type.INTEGER, v.array.get(3).type);
-        assertEquals(JsonValue.Type.LONG, v.array.get(4).type);
-        assertEquals(JsonValue.Type.DOUBLE, v.array.get(5).type);
-        assertEquals(JsonValue.Type.FLOAT, v.array.get(6).type);
-        assertEquals(JsonValue.Type.BIG_DECIMAL, v.array.get(7).type);
-        assertEquals(JsonValue.Type.BIG_INTEGER, v.array.get(8).type);
-        assertEquals(JsonValue.Type.BOOL, v.array.get(9).type);
-        assertEquals(JsonValue.Type.MAP, v.array.get(10).type);
-        assertEquals(JsonValue.Type.ARRAY, v.array.get(11).type);
-        assertEquals(JsonValue.Type.ARRAY, v.array.get(12).type);
-        assertEquals(JsonValue.Type.MAP, v.array.get(13).type);
-        assertEquals(JsonValue.Type.ARRAY, v.array.get(14).type);
-        assertEquals(JsonValue.Type.NULL, v.array.get(15).type);
+        assertNotNull(v.array());
+        assertEquals(16, v.array().size());
+        assertEquals(16, v.size());
+        assertInstanceOf(JsonValue.JVString.class, v.array().get(0));
+        assertSame(JsonValue.NULL, v.array().get(1));
+        assertInstanceOf(JsonValue.JVString.class, v.array().get(2));
+        assertInstanceOf(JsonValue.JVInt.class, v.array().get(3));
+        assertInstanceOf(JsonValue.JVLong.class, v.array().get(4));
+        assertInstanceOf(JsonValue.JVDouble.class, v.array().get(5));
+        assertInstanceOf(JsonValue.JVFloat.class, v.array().get(6));
+        assertInstanceOf(JsonValue.JVBigDecimal.class, v.array().get(7));
+        assertInstanceOf(BigDecimal.class, v.array().get(7).value());
+        assertInstanceOf(JsonValue.JVBigInteger.class, v.array().get(8));
+        assertInstanceOf(BigInteger.class, v.array().get(8).value());
+        assertInstanceOf(JsonValue.JVBool.class, v.array().get(9));
+        assertInstanceOf(JsonValue.JVMap.class, v.array().get(10));
+        assertInstanceOf(JsonValue.JVArray.class, v.array().get(11));
+        assertInstanceOf(JsonValue.JVArray.class, v.array().get(12));
+        assertInstanceOf(JsonValue.JVMap.class, v.array().get(13));
+        assertInstanceOf(JsonValue.JVArray.class, v.array().get(14));
+        assertSame(JsonValue.NULL, v.array().get(15));
     }
 
     @Test
@@ -794,7 +855,7 @@ public final class JsonParsingTests {
 
     @Test
     public void testValueUtilsMapBuilder() {
-        MapBuilder builder = mapBuilder()
+        MapBuilder builder = new MapBuilder()
             .put("string", "Hello")
             .put("char", 'c')
             .put("int", 1)
@@ -820,37 +881,37 @@ public final class JsonParsingTests {
     }
 
     private static void validateMap(boolean checkNull, boolean parsed, JsonValue v) {
-        assertNotNull(v.map);
-        assertEquals(JsonValue.Type.STRING, v.map.get("string").type);
-        assertEquals(JsonValue.Type.STRING, v.map.get("char").type);
-        assertEquals(JsonValue.Type.INTEGER, v.map.get("int").type);
-        assertEquals(JsonValue.Type.LONG, v.map.get("long").type);
+        assertNotNull(v.map());
+        assertInstanceOf(JsonValue.JVString.class, v.map().get("string"));
+        assertInstanceOf(JsonValue.JVString.class, v.map().get("char"));
+        assertInstanceOf(JsonValue.JVInt.class, v.map().get("int"));
+        assertInstanceOf(JsonValue.JVLong.class, v.map().get("long"));
         if (parsed) {
-            assertEquals(JsonValue.Type.BIG_DECIMAL, v.map.get("double").type);
-            assertEquals(JsonValue.Type.BIG_DECIMAL, v.map.get("float").type);
-            assertEquals(JsonValue.Type.LONG, v.map.get("bi").type);
+            assertInstanceOf(JsonValue.JVBigDecimal.class, v.map().get("double"));
+            assertInstanceOf(JsonValue.JVBigDecimal.class, v.map().get("float"));
+            assertInstanceOf(JsonValue.JVLong.class, v.map().get("bi"));
         }
         else {
-            assertEquals(JsonValue.Type.DOUBLE, v.map.get("double").type);
-            assertEquals(JsonValue.Type.FLOAT, v.map.get("float").type);
-            assertEquals(JsonValue.Type.BIG_INTEGER, v.map.get("bi").type);
+            assertInstanceOf(JsonValue.JVDouble.class, v.map().get("double"));
+            assertInstanceOf(JsonValue.JVFloat.class, v.map().get("float"));
+            assertInstanceOf(JsonValue.JVBigInteger.class, v.map().get("bi"));
         }
-        assertEquals(JsonValue.Type.BIG_DECIMAL, v.map.get("bd").type);
-        assertEquals(JsonValue.Type.BOOL, v.map.get("bool").type);
-        assertEquals(JsonValue.Type.MAP, v.map.get("map").type);
-        assertEquals(JsonValue.Type.ARRAY, v.map.get("list").type);
-        assertEquals(JsonValue.Type.ARRAY, v.map.get("set").type);
-        assertEquals(JsonValue.Type.MAP, v.map.get("smap").type);
-        assertEquals(JsonValue.Type.ARRAY, v.map.get("slist").type);
-        assertEquals(JsonValue.Type.MAP, v.map.get("jv").type);
+        assertInstanceOf(JsonValue.JVBigDecimal.class, v.map().get("bd"));
+        assertInstanceOf(JsonValue.JVBool.class, v.map().get("bool"));
+        assertInstanceOf(JsonValue.JVMap.class, v.map().get("map"));
+        assertInstanceOf(JsonValue.JVArray.class, v.map().get("list"));
+        assertInstanceOf(JsonValue.JVArray.class, v.map().get("set"));
+        assertInstanceOf(JsonValue.JVMap.class, v.map().get("smap"));
+        assertInstanceOf(JsonValue.JVArray.class, v.map().get("slist"));
+        assertInstanceOf(JsonValue.JVMap.class, v.map().get("jv"));
         if (checkNull) {
-            assertEquals(18, v.map.size());
-            assertEquals(JsonValue.Type.NULL, v.map.get("null").type);
-            assertEquals(JsonValue.Type.NULL, v.map.get("jvNull").type);
-            assertEquals(JsonValue.Type.NULL, v.map.get("empty_is_null").type);
+            assertEquals(18, v.map().size());
+            assertSame(JsonValue.NULL, v.map().get("null"));
+            assertSame(JsonValue.NULL, v.map().get("jvNull"));
+            assertSame(JsonValue.NULL, v.map().get("empty_is_null"));
         }
         else {
-            assertEquals(15, v.map.size());
+            assertEquals(15, v.map().size());
         }
     }
 
@@ -878,7 +939,7 @@ public final class JsonParsingTests {
 
     @Test
     public void testValueUtilsArrayBuilder() {
-        ArrayBuilder builder = arrayBuilder()
+        ArrayBuilder builder = new ArrayBuilder()
             .add("Hello")
             .add('c')
             .add(1)
@@ -902,42 +963,43 @@ public final class JsonParsingTests {
     }
 
     private static void validateArray(boolean checkNull, boolean parsed, JsonValue v) {
-        assertNotNull(v.array);
-        assertEquals(JsonValue.Type.STRING, v.array.get(0).type);
-        assertEquals(JsonValue.Type.STRING, v.array.get(1).type);
-        assertEquals(JsonValue.Type.INTEGER, v.array.get(2).type);
-        assertEquals(JsonValue.Type.LONG, v.array.get(3).type);
+        assertNotNull(v.array());
+        assertInstanceOf(JsonValue.JVString.class, v.array().get(0));
+        assertInstanceOf(JsonValue.JVString.class, v.array().get(1));
+        assertInstanceOf(JsonValue.JVInt.class, v.array().get(2));
+        assertInstanceOf(JsonValue.JVLong.class, v.array().get(3));
         if (parsed) {
-            assertEquals(JsonValue.Type.BIG_DECIMAL, v.array.get(4).type);
-            assertEquals(JsonValue.Type.BIG_DECIMAL, v.array.get(5).type);
-            assertEquals(JsonValue.Type.LONG, v.array.get(7).type);
+            assertInstanceOf(JsonValue.JVBigDecimal.class, v.array().get(4));
+            assertInstanceOf(JsonValue.JVBigDecimal.class, v.array().get(5));
+            assertInstanceOf(JsonValue.JVLong.class, v.array().get(7));
         }
         else {
-            assertEquals(JsonValue.Type.DOUBLE, v.array.get(4).type);
-            assertEquals(JsonValue.Type.FLOAT, v.array.get(5).type);
-            assertEquals(JsonValue.Type.BIG_INTEGER, v.array.get(7).type);
+            assertInstanceOf(JsonValue.JVDouble.class, v.array().get(4));
+            assertInstanceOf(JsonValue.JVFloat.class, v.array().get(5));
+            assertInstanceOf(JsonValue.JVBigInteger.class, v.array().get(7));
         }
-        assertEquals(JsonValue.Type.BIG_DECIMAL, v.array.get(6).type);
-        assertEquals(JsonValue.Type.BOOL, v.array.get(8).type);
-        assertEquals(JsonValue.Type.MAP, v.array.get(9).type);
-        assertEquals(JsonValue.Type.ARRAY, v.array.get(10).type);
-        assertEquals(JsonValue.Type.MAP, v.array.get(11).type);
-        assertEquals(JsonValue.Type.ARRAY, v.array.get(12).type);
-        assertEquals(JsonValue.Type.MAP, v.array.get(13).type);
+        assertInstanceOf(JsonValue.JVBigDecimal.class, v.array().get(6));
+        assertInstanceOf(JsonValue.JVBool.class, v.array().get(8));
+        assertInstanceOf(JsonValue.JVMap.class, v.array().get(9));
+        assertInstanceOf(JsonValue.JVArray.class, v.array().get(10));
+        assertInstanceOf(JsonValue.JVMap.class, v.array().get(11));
+        assertInstanceOf(JsonValue.JVArray.class, v.array().get(12));
+        assertInstanceOf(JsonValue.JVMap.class, v.array().get(13));
         if (checkNull) {
-            assertEquals(16, v.array.size());
-            assertEquals(JsonValue.Type.NULL, v.array.get(14).type);
-            assertEquals(JsonValue.Type.NULL, v.array.get(15).type);
+            assertEquals(16, v.array().size());
+            assertSame(JsonValue.NULL, v.array().get(14));
+            assertSame(JsonValue.NULL, v.array().get(15));
         }
         else {
-            assertEquals(14, v.array.size());
+            assertEquals(14, v.array().size());
+            assertEquals(14, v.size());
         }
     }
 
     @Test
     public void testReadStringStringMap() {
-        JsonValue jv = mapBuilder()
-            .put("stringString", mapBuilder().put("a", "A").put("b", "B").toJsonValue())
+        JsonValue jv = new MapBuilder()
+            .put("stringString", new MapBuilder().put("a", "A").put("b", "B").toJsonValue())
             .put("empty", new HashMap<>())
             .put("string", "string")
             .toJsonValue();
