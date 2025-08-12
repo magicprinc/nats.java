@@ -172,8 +172,7 @@ public class ConsumerConfiguration implements JsonSerializable {
      * @return json consumer configuration json string
      */
     @Override
-    @NonNull
-	public String toJson() {
+    public @NonNull String toJson() {
         StringBuilder sb = beginJson();
         JsonUtils.addField(sb, DESCRIPTION, description);
         JsonUtils.addField(sb, DURABLE_NAME, durable);
@@ -828,8 +827,7 @@ public class ConsumerConfiguration implements JsonSerializable {
             headersOnly(readBoolean(jsonValue, HEADERS_ONLY, null));
             memStorage(readBoolean(jsonValue, MEM_STORAGE, null));
 
-            //noinspection DataFlowIssue readNanosList with false ensures not null;
-            backoff(readNanosList(jsonValue, BACKOFF, false).toArray(new Duration[0]));
+            backoff(readNanosList(jsonValue, BACKOFF).toArray(new Duration[0]));
 
             metadata(readStringStringMap(jsonValue, METADATA));
 

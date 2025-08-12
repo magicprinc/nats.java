@@ -135,6 +135,12 @@ public abstract class JsonValueUtils {
         return l == null ? dflt : Duration.ofNanos(l);
     }
 
+
+    public static <T> @Nullable List<T> emptyListAsNull(List<T> list) {
+        return list == null || list.isEmpty() ? null : list;
+    }
+
+
     public static <T> List<T> listOf(@Nullable JsonValue v, Function<JsonValue, T> provider) {
         List<T> list = new ArrayList<>();
         if (v != null && v.array != null) {
@@ -149,8 +155,7 @@ public abstract class JsonValueUtils {
     }
 
     public static <T> @Nullable List<T> optionalListOf(@Nullable JsonValue v, Function<JsonValue, T> provider) {
-        List<T> list = listOf(v, provider);
-        return list.isEmpty() ? null : list;
+        return emptyListAsNull(listOf(v, provider));
     }
 
     public static List<String> readStringList(JsonValue jsonValue, String key) {
@@ -180,17 +185,14 @@ public abstract class JsonValueUtils {
         JsonValue v = readValue(jsonValue,key);
         return listOf(v, JsonValueUtils::getLong);
     }
-    public static @Nullable List<Duration> readNanosList(JsonValue jsonValue, String key) {
-        return readNanosList(jsonValue, key, false);
-    }
 
-    public static @Nullable List<Duration> readNanosList(JsonValue jsonValue, String key, boolean nullIfEmpty) {
+    public static List<Duration> readNanosList(JsonValue jsonValue, String key) {
         JsonValue v = readValue(jsonValue,key);
         List<Duration> list = listOf(v, vv -> {
             Long l = getLong(vv);
             return l == null ? null : Duration.ofNanos(l);
         });
-        return list.isEmpty() && nullIfEmpty ? null : list;
+        return list;
     }
 
     public static byte @Nullable [] readBytes(JsonValue jsonValue, String key) {
