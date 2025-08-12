@@ -822,7 +822,8 @@ public final class JsonParsingTests {
             .put("smap", new TestSerializableMap())
             .put("slist", new TestSerializableList())
             .put("jv", JsonValue.EMPTY_MAP)
-            .put("null", null)
+            .put("null", (Map<String,?>) null)
+            .put("null2", (String) null)
             .put("jvNull", JsonValue.NULL)
             .put("empty_is_null", "");
         validateMap(false, false, builder.toJsonValue());
@@ -923,9 +924,13 @@ public final class JsonParsingTests {
 
     @Test
     public void testReadStringStringMap() {
+        HashMap<String, Object> subMap = new HashMap<>();
+        subMap.put("subKey1", 42);
+        subMap.put("subKey2", "subValue2");
         JsonValue jv = mapBuilder()
             .put("stringString", mapBuilder().put("a", "A").put("b", "B").toJsonValue())
             .put("empty", new HashMap<>())
+            .put("map", subMap)
             .put("string", "string")
             .toJsonValue();
 
@@ -936,6 +941,8 @@ public final class JsonParsingTests {
         assertEquals(2, stringString.size());
         assertEquals("A", stringString.get("a"));
         assertEquals("B", stringString.get("b"));
+
+        assertEquals("subValue2", readStringStringMap(jv, "map").get("subKey2"));
     }
 
     @Test

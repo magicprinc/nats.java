@@ -247,7 +247,7 @@ public abstract class JsonValueUtils {
         return v;
     }
 
-    public static JsonValue toJsonValue(Object o) {
+    static JsonValue toJsonValue(Object o) {
         if (o == null) {
             return JsonValue.NULL;
         }
@@ -312,24 +312,26 @@ public abstract class JsonValueUtils {
             this.jv = jv;
         }
 
-        public MapBuilder put(String s, Object o) {
-            if (o != null) {
-                JsonValue vv = JsonValueUtils.toJsonValue(o);
-                if (vv.type != JsonValue.Type.NULL) {
-                    jv.map.put(s, vv);
-                    jv.mapOrder.add(s);
-                }
+        public MapBuilder put(String s, @Nullable Object o) {
+            JsonValue vv = JsonValueUtils.toJsonValue(o);
+            if (vv.type != JsonValue.Type.NULL) {
+                jv.map.put(s, vv);
+                jv.mapOrder.add(s);
             }
             return this;
         }
 
-        public MapBuilder put(String key, Map<String, String> stringMap) {
+        public MapBuilder put(String key, Map<String, ?> stringMap) {
             if (stringMap != null) {
-                MapBuilder mb = new MapBuilder();
-                for (Map.Entry<String, String> entry : stringMap.entrySet()) {
-                    mb.put(entry.getKey(), entry.getValue());
+                JsonValue mb = new JsonValue(new HashMap<>(stringMap.size()*4/3+1));
+                for (Map.Entry<String, ?> entry : stringMap.entrySet()) {
+                    JsonValue vv = JsonValueUtils.toJsonValue(entry.getValue());
+                    if (vv.type != JsonValue.Type.NULL) {
+                        mb.map.put(entry.getKey(), vv);
+                        mb.mapOrder.add(entry.getKey());
+                    }
                 }
-                jv.map.put(key, mb.jv);
+                jv.map.put(key, mb);
                 jv.mapOrder.add(key);
             }
             return this;
