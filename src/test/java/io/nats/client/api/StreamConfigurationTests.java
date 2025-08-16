@@ -120,7 +120,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
     @Test
     public void testSerializationDeserializationDefaults() throws Exception {
-        StreamConfiguration sc = StreamConfiguration.instance("");
+        StreamConfiguration sc = StreamConfiguration.instance("{\"name\":\"name\"}");
         assertNotNull(sc);
         String serializedJson = sc.toJson();
         assertNotNull(StreamConfiguration.instance(serializedJson));
@@ -134,7 +134,6 @@ public class StreamConfigurationTests extends JetStreamTestBase {
                 add(COMPRESSION);
                 add(STORAGE);
                 add(DISCARD);
-                add(NAME);
                 add(DESCRIPTION);
                 add(MAX_CONSUMERS);
                 add(MAX_MSGS);
@@ -239,6 +238,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
         validate(builder.build(), false, DEFAULT_STREAM_NAME);
         validate(builder.addSources((Source)null).build(), false, DEFAULT_STREAM_NAME);
 
+        assertNotNull(testSc.getSources());
         List<Source> sources = new ArrayList<>(testSc.getSources());
         sources.add(null);
         Source copy = new Source(JsonParser.parseUnchecked(sources.get(0).toJson()));
@@ -257,12 +257,15 @@ public class StreamConfigurationTests extends JetStreamTestBase {
         validate(builder.build(), false, DEFAULT_STREAM_NAME);
 
         // equals and hashcode coverage
-        External external = copy.getExternal();
+        External externalFromCopy = copy.getExternal();
+        assertNotNull(externalFromCopy);
 
         assertEquals(sources.get(0), copy);
         assertEquals(sources.get(0).hashCode(), copy.hashCode());
-        assertEquals(sources.get(0).getExternal(), external);
-        assertEquals(sources.get(0).getExternal().hashCode(), external.hashCode());
+        External externalSource = sources.get(0).getExternal();
+        assertNotNull(externalSource);
+        assertEquals(externalSource, externalFromCopy);
+        assertEquals(externalSource.hashCode(), externalFromCopy.hashCode());
 
         List<String> lines = ResourceUtils.dataAsLines("MirrorsSources.json");
         for (String l1 : lines) {
@@ -278,6 +281,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
                 //this provides testing coverage
                 //noinspection ConstantConditions,SimplifiableAssertion
                 assertTrue(!m1.equals(null));
+                //noinspection MisorderedAssertEqualsArguments
                 assertNotEquals(m1, new Object());
                 for (String l2 : lines) {
                     if (l2.startsWith("{")) {
@@ -301,7 +305,9 @@ public class StreamConfigurationTests extends JetStreamTestBase {
             External e1 = new External(JsonParser.parseUnchecked(l1));
             //noinspection EqualsWithItself
             assertEquals(e1, e1);
+            //noinspection MisorderedAssertEqualsArguments
             assertNotEquals(e1, null);
+            //noinspection MisorderedAssertEqualsArguments
             assertNotEquals(e1, new Object());
             for (String l2 : lines) {
                 External e2 = new External(JsonParser.parseUnchecked(l2));
@@ -316,11 +322,12 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
         // coverage for null StreamConfiguration, millis maxAge, millis duplicateWindow
         StreamConfiguration scCov = StreamConfiguration.builder(null)
-                .maxAge(1111)
-                .duplicateWindow(2222)
-                .build();
+            .name(name())
+            .maxAge(1111)
+            .duplicateWindow(2222)
+            .build();
 
-        assertEquals("", scCov.getName());// @NonNull!
+        assertNotNull(scCov.getName());
         assertEquals(Duration.ofMillis(1111), scCov.getMaxAge());
         assertEquals(Duration.ofMillis(2222), scCov.getDuplicateWindow());
     }
@@ -354,17 +361,21 @@ public class StreamConfigurationTests extends JetStreamTestBase {
     public void testSourceBase() {
         StreamConfiguration sc = getTestConfiguration();
         Mirror m = sc.getMirror();
-
+        assertNotNull(m);
         JsonValue v = JsonParser.parseUnchecked(m.toJson());
         Source s1 = new Source(v);
         Source s2 = new Source(v);
         assertEquals(s1, s2);
+        //noinspection MisorderedAssertEqualsArguments
         assertNotEquals(s1, null);
+        //noinspection MisorderedAssertEqualsArguments
         assertNotEquals(s1, new Object());
         Mirror m1 = new Mirror(v);
         Mirror m2 = new Mirror(v);
         assertEquals(m1, m2);
+        //noinspection MisorderedAssertEqualsArguments
         assertNotEquals(m1, null);
+        //noinspection MisorderedAssertEqualsArguments
         assertNotEquals(m1, new Object());
 
         Source.Builder sb = Source.builder();
@@ -407,7 +418,9 @@ public class StreamConfigurationTests extends JetStreamTestBase {
         assertEquals(sb.subjectTransforms, m1.getSubjectTransforms());
 
         // coverage
-        String s = m.getSubjectTransforms().get(0).toString();
+        List<SubjectTransform> st = m.getSubjectTransforms();
+        assertNotNull(st);
+        String s = st.get(0).toString();
         assertTrue(s != null && !s.isEmpty());
     }
 
@@ -424,7 +437,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
     @Test
     public void testSubjects() {
-        StreamConfiguration.Builder builder = StreamConfiguration.builder();
+        StreamConfiguration.Builder builder = StreamConfiguration.builder().name(name());
 
         // subjects(...) replaces
         builder.subjects(subject(0));
@@ -480,7 +493,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
     @Test
     public void testRetentionPolicy() {
-        StreamConfiguration.Builder builder = StreamConfiguration.builder();
+        StreamConfiguration.Builder builder = StreamConfiguration.builder().name(name());
         assertEquals(RetentionPolicy.Limits, builder.build().getRetentionPolicy());
 
         builder.retentionPolicy(RetentionPolicy.Limits);
@@ -498,7 +511,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
     @Test
     public void testCompressionOption() {
-        StreamConfiguration.Builder builder = StreamConfiguration.builder();
+        StreamConfiguration.Builder builder = StreamConfiguration.builder().name(name());
         assertEquals(None, builder.build().getCompressionOption());
 
         builder.compressionOption(None);
@@ -515,7 +528,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
     @Test
     public void testStorageType() {
-        StreamConfiguration.Builder builder = StreamConfiguration.builder();
+        StreamConfiguration.Builder builder = StreamConfiguration.builder().name(name());
         assertEquals(StorageType.File, builder.build().getStorageType());
 
         builder.storageType(StorageType.Memory);
@@ -527,7 +540,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
     @Test
     public void testDiscardPolicy() {
-        StreamConfiguration.Builder builder = StreamConfiguration.builder();
+        StreamConfiguration.Builder builder = StreamConfiguration.builder().name(name());
         assertEquals(DiscardPolicy.Old, builder.build().getDiscardPolicy());
 
         builder.discardPolicy(DiscardPolicy.New);
@@ -566,6 +579,7 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
         assertNotNull(sc.getPlacement());
         assertEquals("clstr", sc.getPlacement().getCluster());
+        assertNotNull(sc.getPlacement().getTags());
         assertEquals(2, sc.getPlacement().getTags().size());
         assertEquals("tag1", sc.getPlacement().getTags().get(0));
         assertEquals("tag2", sc.getPlacement().getTags().get(1));
@@ -606,10 +620,12 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
             validateSubjectTransforms(mirror.getSubjectTransforms(), 2, "m");
 
+            assertNotNull(sc.getSources());
             assertEquals(2, sc.getSources().size());
             validateSource(sc.getSources().get(0), 0, zdt);
             validateSource(sc.getSources().get(1), 1, zdt);
 
+            assertNotNull(sc.getMetadata());
             assertEquals(1, sc.getMetadata().size());
             assertEquals(META_VALUE, sc.getMetadata().get(META_KEY));
             assertEquals(82942, sc.getFirstSequence());
@@ -669,16 +685,19 @@ public class StreamConfigurationTests extends JetStreamTestBase {
 
         p = Placement.builder().tags("a", "b").build();
         assertNull(p.getCluster());
+        assertNotNull(p.getTags());
         assertEquals(2, p.getTags().size());
         assertTrue(p.hasData());
 
         p = Placement.builder().tags("a", "b").build();
         assertNull(p.getCluster());
+        assertNotNull(p.getTags());
         assertEquals(2, p.getTags().size());
         assertTrue(p.hasData());
 
         p = Placement.builder().cluster("cluster").tags(Arrays.asList("a", "b")).build();
         assertEquals("cluster", p.getCluster());
+        assertNotNull(p.getTags());
         assertEquals(2, p.getTags().size());
         assertTrue(p.hasData());
 

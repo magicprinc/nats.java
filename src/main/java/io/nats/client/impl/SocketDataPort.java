@@ -14,8 +14,10 @@
 package io.nats.client.impl;
 
 import io.nats.client.Options;
+import io.nats.client.support.NatsInetAddress;
 import io.nats.client.support.NatsUri;
 import io.nats.client.support.WebSocket;
+import org.jspecify.annotations.NonNull;
 
 import javax.net.ssl.HandshakeCompletedListener;
 import javax.net.ssl.SSLContext;
@@ -36,9 +38,11 @@ import static io.nats.client.support.NatsConstants.SECURE_WEBSOCKET_PROTOCOL;
 /**
  * This class is not thread-safe.  Caller must ensure thread safety.
  */
+@SuppressWarnings("ClassEscapesDefinedScope") // NatsConnection
 public class SocketDataPort implements DataPort {
 
     protected NatsConnection connection;
+
     protected String host;
     protected int port;
     protected Socket socket;
@@ -54,7 +58,7 @@ public class SocketDataPort implements DataPort {
     }
 
     @Override
-    public void connect(String serverURI, NatsConnection conn, long timeoutNanos) throws IOException {
+    public void connect(@NonNull String serverURI, @NonNull NatsConnection conn, long timeoutNanos) throws IOException {
         try {
             connect(conn, new NatsUri(serverURI), timeoutNanos);
         }
@@ -64,7 +68,7 @@ public class SocketDataPort implements DataPort {
     }
 
     @Override
-    public void connect(NatsConnection conn, NatsUri nuri, long timeoutNanos) throws IOException {
+    public void connect(@NonNull NatsConnection conn, @NonNull NatsUri nuri, long timeoutNanos) throws IOException {
         connection = conn;
         Options options = connection.getOptions();
         long timeout = timeoutNanos / 1_000_000; // convert to millis
@@ -101,7 +105,9 @@ public class SocketDataPort implements DataPort {
             out = socket.getOutputStream();
         }
         catch (Exception e) {
-            try { socket.close(); } catch (Exception ignore) {}
+            if (socket != null) {
+                try { socket.close(); } catch (Exception ignore) {}
+            }
             socket = null;
             if (e instanceof IOException) {
                 throw e;
@@ -156,25 +162,31 @@ public class SocketDataPort implements DataPort {
 
     public void shutdownInput() throws IOException {
         // cannot call shutdownInput on sslSocket
-        if (!isSecure) {
+        if (!isSecure && socket != null) {
             socket.shutdownInput();
         }
     }
 
     public void close() throws IOException {
-        socket.close();
+        if (socket != null) {
+            socket.close();
+        }
     }
 
     @Override
     public void forceClose() throws IOException {
-        try {
-            // If we are being asked to force close, there is no need to linger.
-            socket.setSoLinger(true, 0);
+        // socket can technically be null, like between states
+        // practically it never will be, but guard it anyway
+        if (socket != null) {
+            try {
+                // If we are being asked to force close, there is no need to linger.
+                socket.setSoLinger(true, 0);
+            }
+            catch (SocketException e) {
+                // don't want to fail if I couldn't set linger
+            }
+            close();
         }
-        catch (SocketException e) {
-            // don't want to fail if I couldn't set linger
-        }
-        close();
     }
 
     public void flush() throws IOException {
@@ -194,7 +206,7 @@ public class SocketDataPort implements DataPort {
     private Socket connectToFastestIp(Options options, String hostname, int port,
                                       int timeoutMillis) throws IOException {
         // Get all IP addresses for the hostname
-        List<InetAddress> ips = Arrays.asList(InetAddress.getAllByName(hostname));
+        List<InetAddress> ips = Arrays.asList(NatsInetAddress.getAllByName(hostname));
 
         ExecutorService executor = options.getExecutor();
         long CONNECT_DELAY_MILLIS = 250;

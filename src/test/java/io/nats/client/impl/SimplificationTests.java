@@ -110,6 +110,9 @@ public class SimplificationTests extends JetStreamTestBase {
         MessageInfo mi = streamContext.getMessage(1);
         assertEquals(1, mi.getSeq());
 
+        mi = streamContext.getFirstMessage(tsc.subject());
+        assertEquals(1, mi.getSeq());
+
         mi = streamContext.getLastMessage(tsc.subject());
         assertEquals(6, mi.getSeq());
 
@@ -1314,7 +1317,7 @@ public class SimplificationTests extends JetStreamTestBase {
     private void validateCantCallOtherMethods(OrderedConsumerContext ctx) {
         assertThrows(IOException.class, () -> ctx.next(1000));
         assertThrows(IOException.class, () -> ctx.fetchMessages(1));
-        assertThrows(IOException.class, () -> ctx.consume(null));
+        assertThrows(IllegalArgumentException.class, () -> ctx.consume(null));
     }
 
     @Test
@@ -1725,7 +1728,7 @@ public class SimplificationTests extends JetStreamTestBase {
 
             ConsumeOptions consumeOptions = ConsumeOptions.builder()
                 .batchSize(100) // small batch size means more round trips
-                .expiresIn(2000) // idle heartbeat is half of this, alarm time is 3 * ihb
+                .expiresIn(1500) // idle heartbeat is half of this, alarm time is 3 * ihb
                 .build();
 
             OrderedConsumerConfiguration ocConfig = new OrderedConsumerConfiguration().filterSubjects(subject);
@@ -1746,7 +1749,7 @@ public class SimplificationTests extends JetStreamTestBase {
         // reconnect and get some more messages
         try (NatsTestServer ignored = new NatsTestServer(port, false, true)) {
             standardConnectionWait(nc);
-            sleep(5000); // long enough to get messages and for the hb alarm to have tripped
+            sleep(6000); // long enough to get messages and for the hb alarm to have tripped
         }
         validateConsumerNameForOrdered(orderedConsumerContext, mcon, null);
         assertNotEquals(firstConsumerName, orderedConsumerContext.getConsumerName());
@@ -1756,12 +1759,17 @@ public class SimplificationTests extends JetStreamTestBase {
         assertTrue(count2 > count1);
         assertEquals(count2, nextExpectedSequence.get());
 
-        sleep(4000); // enough delay before reconnect to trip hb alarm again
+        sleep(6000); // enough delay before reconnect to trip hb alarm again
         try (NatsTestServer ignored = new NatsTestServer(port, false, true)) {
             standardConnectionWait(nc);
-            sleep(4000); // long enough to get messages and for the hb alarm to have tripped
+            sleep(6000); // long enough to get messages and for the hb alarm to have tripped
 
-            nc.jetStreamManagement().deleteStream(stream); // it was a file stream clean it up
+            try {
+                nc.jetStreamManagement().deleteStream(stream); // it was a file stream clean it up
+            }
+            catch (JetStreamApiException ignore) {
+                // in GH actions this fails sometimes
+            }
         }
 
         assertTrue(allInOrder.get());
