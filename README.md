@@ -4,7 +4,7 @@
 
 ### A [Java](http://java.com) client for the [NATS messaging system](https://nats.io).
 
-**Current Release**: 2.21.4 &nbsp; **Current Snapshot**: 2.21.5-SNAPSHOT
+**Current Release**: 2.21.5 &nbsp; **Current Snapshot**: 2.21.6-SNAPSHOT
 
 [![License Apache 2](https://img.shields.io/badge/License-Apache2-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.nats/jnats/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.nats/jnats)
@@ -133,9 +133,9 @@ Replace `{major.minor.patch}` with the correct version in the examples.
 
 ### Downloading the Jar
 
-You can download the latest jar at [https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.4/jnats-2.21.4.jar](https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.4/jnats-2.21.4.jar).
+You can download the latest jar at [https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.5/jnats-2.21.5.jar](https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.5/jnats-2.21.5.jar).
 
-The examples are available at [https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.4/jnats-2.21.4-examples.jar](https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.4/jnats-2.21.4-examples.jar).
+The examples are available at [https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.5/jnats-2.21.5-examples.jar](https://search.maven.org/remotecontent?filepath=io/nats/jnats/2.21.5/jnats-2.21.5-examples.jar).
 
 ### Using Gradle
 
@@ -913,7 +913,9 @@ https://github.com/nats-io/nats.java/blob/main/src/test/java/io/nats/client/Test
 
 ### TLS Certs
 
-The raw TLS test certs are in [src/test/resources/certs](src/test/resources/certs) and come from the [nats.go](https://github.com/nats-io/nats.go) repository. However, the java client also needs a keystore and truststore.jks files for creating a context. These can be created using:
+The raw TLS test certs are in [src/test/resources/certs](src/test/resources/certs) and come from the [nats.go](https://github.com/nats-io/nats.go) repository. 
+However, the java client also needs a keystore and truststore.jks files for creating a context. These can be created using the following commands:
+
 
 ```bash
 > cd src/test/resources
